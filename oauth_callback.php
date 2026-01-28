@@ -66,8 +66,8 @@ try {
     }
     
     loginUser($user_id);
-    
-    $redirect = $_SESSION['redirect_after_login'] ?? 'meine_angebote.php';
+
+    $redirect = $_SESSION['redirect_after_login'] ?? 'index.php';
     unset($_SESSION['redirect_after_login']);
     
     header('Location: ' . $redirect);
