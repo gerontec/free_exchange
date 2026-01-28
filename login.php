@@ -6,7 +6,7 @@ require_once 'includes/oauth_config.php';
 $pageTitle = 'Anmelden';
 
 if (isLoggedIn()) {
-    header('Location: meine_angebote.php');
+    header('Location: index.php');
     exit;
 }
 
