@@ -1,50 +1,59 @@
 <?php
+/**
+ * index.php - Zweisprachige Lagerraum-Börse
+ */
 require_once 'includes/config.php';
-$pageTitle = 'Lagerraum-Angebote';
 
-// Filter-Parameter
+// 1. Sprache festlegen (Default: de)
+$current_lang = $_SESSION['lang'] ?? 'de';
+$suffix = ($current_lang === 'en') ? '_en' : '_de';
+
+// 2. Filter-Parameter (Sanitized)
 $plz = $_GET['plz'] ?? '';
-$qm_min = $_GET['qm_min'] ?? '';
-$qm_max = $_GET['qm_max'] ?? '';
-$preis_max = $_GET['preis_max'] ?? '';
 $ort = $_GET['ort'] ?? '';
-$land = $_GET['land'] ?? '';
+$land = $_GET['land'] ?? 'DE';
+$qm_min = !empty($_GET['qm_min']) ? (float)$_GET['qm_min'] : null;
+$qm_max = !empty($_GET['qm_max']) ? (float)$_GET['qm_max'] : null;
+$preis_max = !empty($_GET['preis_max']) ? (float)$_GET['preis_max'] : null;
 
-// SQL Query bauen
-$sql = "SELECT * FROM lg_v_angebote WHERE 1=1";
+$pageTitle = ($current_lang === 'en') ? 'Storage Offers' : 'Lagerraum-Angebote';
+
+// 3. SQL Query direkt auf die Tabellen
+$sql = "SELECT l.*, a.strasse, a.hausnummer, a.plz, a.ort, a.land, u.name as anbieter_name,
+               DATEDIFF(DATE_ADD(l.erstellt_am, INTERVAL 60 DAY), NOW()) as tage_verbleibend
+        FROM lg_lagerraeume l
+        JOIN lg_adressen a ON l.adresse_id = a.adresse_id
+        JOIN lg_users u ON l.anbieter_id = u.user_id
+        WHERE l.typ = 'angebot' AND l.aktiv = 1 AND u.aktiv = 1";
+
 $params = [];
 
-if ($land && $land !== 'DE') {
-    $sql .= " AND land = :land";
-    $params[':land'] = $land;
-}
-
 if ($plz) {
-    $sql .= " AND plz LIKE :plz";
+    $sql .= " AND a.plz LIKE :plz";
     $params[':plz'] = $plz . '%';
 }
-
 if ($ort) {
-    $sql .= " AND ort LIKE :ort";
+    $sql .= " AND a.ort LIKE :ort";
     $params[':ort'] = '%' . $ort . '%';
 }
-
+if ($land) {
+    $sql .= " AND a.land = :land";
+    $params[':land'] = $land;
+}
 if ($qm_min) {
-    $sql .= " AND qm_gesamt >= :qm_min";
+    $sql .= " AND l.qm_gesamt >= :qm_min";
     $params[':qm_min'] = $qm_min;
 }
-
 if ($qm_max) {
-    $sql .= " AND qm_gesamt <= :qm_max";
+    $sql .= " AND l.qm_gesamt <= :qm_max";
     $params[':qm_max'] = $qm_max;
 }
-
 if ($preis_max) {
-    $sql .= " AND preis_pro_qm <= :preis_max";
+    $sql .= " AND l.preis_pro_qm <= :preis_max";
     $params[':preis_max'] = $preis_max;
 }
 
-$sql .= " ORDER BY erstellt_am DESC";
+$sql .= " ORDER BY l.erstellt_am DESC";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -53,118 +62,64 @@ $angebote = $stmt->fetchAll();
 include 'includes/header.php';
 ?>
 
-<h2>Lagerraum-Angebote</h2>
+<div class="container">
+    <h2><?= ($current_lang === 'en') ? 'Available Storage Units' : 'Verfügbare Lagerräume' ?></h2>
 
-<!-- Filter -->
-<div class="filter-box">
-    <h3>🔍 Suche filtern</h3>
-    <form method="GET" id="filterForm">
-        <div class="filter-grid">
-            <div class="form-group">
-                <label>Land</label>
+    <div class="filter-box" style="background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <form method="GET">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                <input type="text" name="plz" placeholder="PLZ" value="<?= htmlspecialchars($plz) ?>">
+                <input type="text" name="ort" placeholder="Ort" value="<?= htmlspecialchars($ort) ?>">
                 <select name="land">
-                    <option value="">Alle Länder</option>
-                    <?php foreach ($LAENDER as $code => $name): ?>
-                        <option value="<?= $code ?>" <?= $land === $code ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($name) ?>
-                        </option>
-                    <?php endforeach; ?>
+                    <option value="DE" <?= $land == 'DE' ? 'selected' : '' ?>>Deutschland</option>
+                    <option value="AT" <?= $land == 'AT' ? 'selected' : '' ?>>Österreich</option>
+                    <option value="CH" <?= $land == 'CH' ? 'selected' : '' ?>>Schweiz</option>
                 </select>
+                <input type="number" name="qm_min" placeholder="Min m²" value="<?= $qm_min ?>">
+                <input type="number" name="preis_max" placeholder="Max €/m²" value="<?= $preis_max ?>">
+                <button type="submit" class="btn"><?= ($current_lang === 'en') ? 'Search' : 'Suchen' ?></button>
             </div>
-            <div class="form-group">
-                <label>PLZ</label>
-                <input type="text" name="plz" value="<?= htmlspecialchars($plz) ?>" placeholder="z.B. 10115">
-            </div>
-            <div class="form-group">
-                <label>Ort</label>
-                <input type="text" name="ort" value="<?= htmlspecialchars($ort) ?>" placeholder="z.B. Berlin">
-            </div>
-            <div class="form-group">
-                <label>Min. m²</label>
-                <input type="number" name="qm_min" value="<?= htmlspecialchars($qm_min) ?>" placeholder="z.B. 50">
-            </div>
-            <div class="form-group">
-                <label>Max. m²</label>
-                <input type="number" name="qm_max" value="<?= htmlspecialchars($qm_max) ?>" placeholder="z.B. 200">
-            </div>
-            <div class="form-group">
-                <label>Max. €/m²</label>
-                <input type="number" name="preis_max" value="<?= htmlspecialchars($preis_max) ?>" step="0.01" placeholder="z.B. 10">
-            </div>
-        </div>
-        <button type="submit" class="btn">Suchen</button>
-        <a href="index.php" class="btn">Filter zurücksetzen</a>
-    </form>
-</div>
+        </form>
+    </div>
 
-<!-- Angebote -->
-<p><?= count($angebote) ?> Angebot(e) gefunden</p>
+    <p><?= count($angebote) ?> <?= ($current_lang === 'en') ? 'offers found' : 'Angebote gefunden' ?></p>
 
-<?php foreach ($angebote as $a): ?>
-<div class="card">
-    <h3>📦 <?= htmlspecialchars($a['ort']) ?> (<?= htmlspecialchars($LAENDER[$a['land']] ?? $a['land']) ?>) - <?= number_format($a['qm_gesamt'], 0, ',', '.') ?> m²</h3>
-    
-    <div class="info">
-        <div class="info-item">
-            <strong>📍 Adresse:</strong>
-            <?= htmlspecialchars($a['strasse']) ?> <?= htmlspecialchars($a['hausnummer']) ?>, 
-            <?= htmlspecialchars($a['plz']) ?> <?= htmlspecialchars($a['ort']) ?>, 
-            <?= htmlspecialchars($LAENDER[$a['land']] ?? $a['land']) ?>
-        </div>
-        <div class="info-item">
-            <strong>📏 Fläche:</strong>
-            <?= number_format($a['qm_gesamt'], 2, ',', '.') ?> m²
-        </div>
-        <div class="info-item">
-            <strong>🏠 Anzahl Räume:</strong>
-            <?= $a['anzahl_raeume'] ?>
-        </div>
-        <div class="info-item">
-            <strong>📅 Verfügbar ab:</strong>
-            <?= $a['verfuegbar_ab'] ? date('d.m.Y', strtotime($a['verfuegbar_ab'])) : 'Sofort' ?>
-        </div>
-        <?php if (isset($a['tage_verbleibend'])): ?>
-        <div class="info-item">
-            <strong>⏰ Anzeige läuft noch:</strong>
-            <?= max(0, $a['tage_verbleibend']) ?> Tage
-        </div>
-        <?php endif; ?>
-    </div>
-    
-    <div style="margin: 15px 0;">
-        <?php if ($a['beheizt']): ?>
-            <span class="badge badge-orange">🔥 Beheizt</span>
-        <?php endif; ?>
-        <?php if ($a['zugang_24_7']): ?>
-            <span class="badge badge-blue">🕐 24/7 Zugang</span>
-        <?php endif; ?>
-        <?php if ($a['klimatisiert']): ?>
-            <span class="badge badge-blue">❄️ Klimatisiert</span>
-        <?php endif; ?>
-        <?php if ($a['alarm_vorhanden']): ?>
-            <span class="badge badge-green">🔒 Alarmgesichert</span>
-        <?php endif; ?>
-    </div>
-    
-    <div class="price">
-        <?= number_format($a['preis_pro_qm'], 2, ',', '.') ?> €/m² · 
-        Gesamt: <?= number_format($a['preis_gesamt'], 2, ',', '.') ?> €/Monat
-    </div>
-    
-    <?php if ($a['bemerkung']): ?>
-        <p style="margin-top: 10px; color: #7f8c8d;"><?= nl2br(htmlspecialchars($a['bemerkung'])) ?></p>
-    <?php endif; ?>
-    
-    <div style="margin-top: 15px;">
-        <a href="kontakt.php?id=<?= $a['lagerraum_id'] ?>" class="btn btn-contact">📧 Kontakt aufnehmen</a>
+    <div class="grid">
+        <?php foreach ($angebote as $a): ?>
+            <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                <h3>📦 <?= htmlspecialchars($a['ort']) ?> - <?= number_format($a['qm_gesamt'], 1, ',', '.') ?> m²</h3>
+                
+                <p><strong>📍 <?= htmlspecialchars($a['plz'] . ' ' . $a['ort']) ?></strong> (<?= htmlspecialchars($a['land']) ?>)</p>
+                
+                <div class="description" style="font-style: italic; color: #555;">
+                    <?php 
+                        // Sprach-Logik: Falls englisch gewünscht aber leer, Fallback auf Deutsch
+                        $desc = (!empty($a['bemerkung' . $suffix])) ? $a['bemerkung' . $suffix] : $a['bemerkung_de'];
+                        echo nl2br(htmlspecialchars($desc));
+                    ?>
+                </div>
+
+                <div class="details" style="margin-top: 10px;">
+                    <span class="badge"><?= $a['beheizt'] ? '🔥 Beheizt' : '❄️ Unbeheizt' ?></span>
+                    <span class="badge"><?= $a['zugang_24_7'] ? '🕐 24/7' : '🔒 Eingeschränkt' ?></span>
+                </div>
+
+                <div class="price" style="font-weight: bold; font-size: 1.2em; margin-top: 10px; color: #2c3e50;">
+                    <?= number_format($a['preis_pro_qm'], 2, ',', '.') ?> €/m² 
+                    <small>(Total: <?= number_format($a['preis_gesamt'], 2, ',', '.') ?> €)</small>
+                </div>
+
+                <div class="footer" style="margin-top: 15px; font-size: 0.85em; border-top: 1px solid #eee; padding-top: 10px;">
+                    👤 <?= htmlspecialchars($a['anbieter_name']) ?> | 
+                    ⏳ <?= ($current_lang === 'en') ? 'Expires in: ' : 'Läuft noch: ' ?> <?= $a['tage_verbleibend'] ?> <?= ($current_lang === 'en') ? 'days' : 'Tage' ?>
+                </div>
+                
+                <a href="kontakt.php?id=<?= $a['lagerraum_id'] ?>" class="btn" style="display:inline-block; margin-top:10px; background:#3498db; color:white; padding:5px 10px; text-decoration:none;">
+                    <?= ($current_lang === 'en') ? 'Contact' : 'Kontakt aufnehmen' ?>
+                </a>
+            </div>
+        <?php endforeach; ?>
     </div>
 </div>
-<?php endforeach; ?>
-
-<?php if (empty($angebote)): ?>
-    <div class="card">
-        <p>Keine Angebote gefunden. Versuchen Sie andere Filterkriterien.</p>
-    </div>
-<?php endif; ?>
 
 <?php include 'includes/footer.php'; ?>
