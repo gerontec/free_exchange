@@ -7,9 +7,13 @@ $current_user = getCurrentUser();
 
 // Aktuelle Börse ermitteln
 $current_exchange = 'storage'; // default
-if (strpos($_SERVER['REQUEST_URI'], 'gun_') !== false || 
+if (strpos($_SERVER['REQUEST_URI'], 'gun_') !== false ||
     strpos($_SERVER['REQUEST_URI'], 'waffen') !== false) {
     $current_exchange = 'guns';
+} elseif (strpos($_SERVER['REQUEST_URI'], 'em_') !== false ||
+          strpos($_SERVER['REQUEST_URI'], 'edelmetall') !== false ||
+          (isset($_GET['exchange']) && $_GET['exchange'] === 'metals')) {
+    $current_exchange = 'metals';
 }
 ?>
 <!DOCTYPE html>
@@ -30,11 +34,14 @@ if (strpos($_SERVER['REQUEST_URI'], 'gun_') !== false ||
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="btn-group" role="group">
-                    <a href="index.php" class="btn btn-sm <?= $current_exchange === 'storage' ? 'btn-light' : 'btn-outline-light' ?>">
+                    <a href="index.php?exchange=storage" class="btn btn-sm <?= $current_exchange === 'storage' ? 'btn-light' : 'btn-outline-light' ?>">
                         <i class="bi bi-building"></i> <?= t('exchange_storage') ?>
                     </a>
                     <a href="gun_index.php" class="btn btn-sm <?= $current_exchange === 'guns' ? 'btn-light' : 'btn-outline-light' ?>">
                         <i class="bi bi-crosshair"></i> <?= t('exchange_guns') ?>
+                    </a>
+                    <a href="index.php?exchange=metals" class="btn btn-sm <?= $current_exchange === 'metals' ? 'btn-light' : 'btn-outline-light' ?>">
+                        <i class="bi bi-gem"></i> <?= current_lang() === 'en' ? 'Precious Metals' : 'Edelmetalle' ?>
                     </a>
                 </div>
                 <small class="text-white-50"><?= t('exchange_select') ?></small>
@@ -43,11 +50,19 @@ if (strpos($_SERVER['REQUEST_URI'], 'gun_') !== false ||
     </div>
     
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark <?= $current_exchange === 'guns' ? 'bg-danger' : 'bg-dark' ?> sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-dark <?= $current_exchange === 'guns' ? 'bg-danger' : ($current_exchange === 'metals' ? 'bg-warning' : 'bg-dark') ?> sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand" href="<?= $current_exchange === 'guns' ? 'gun_index.php' : 'index.php' ?>">
-                <i class="bi bi-<?= $current_exchange === 'guns' ? 'crosshair' : 'building' ?>"></i> 
-                <?= t($current_exchange === 'guns' ? 'exchange_guns' : 'exchange_storage') ?>
+            <a class="navbar-brand" href="<?= $current_exchange === 'guns' ? 'gun_index.php' : 'index.php' . ($current_exchange === 'metals' ? '?exchange=metals' : '') ?>">
+                <i class="bi bi-<?= $current_exchange === 'guns' ? 'crosshair' : ($current_exchange === 'metals' ? 'gem' : 'building') ?>"></i>
+                <?php
+                    if ($current_exchange === 'guns') {
+                        echo t('exchange_guns');
+                    } elseif ($current_exchange === 'metals') {
+                        echo (current_lang() === 'en' ? 'Precious Metals' : 'Edelmetalle');
+                    } else {
+                        echo t('exchange_storage');
+                    }
+                ?>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
