@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Sitemap: https://heissa.de/web2/sitemap.xml
+
+# Crawl-Delay für höfliche Bots
+Crawl-delay: 1
+
+# Keine Kontaktformular-Submissions crawlen
+Disallow: /kontakt.php?

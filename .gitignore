@@ -1,0 +1,43 @@
+# --- Sensible Daten & Secrets ---
+oauthgoogl.json
+oauth_config.php
+includes/config.php
+includes/oauth_config.php
+google582d618afc164a51.html
+
+# --- User-Uploads & Binärdateien ---
+# Wir ignorieren den Inhalt, behalten aber den Ordner
+uploads/*
+!uploads/.gitkeep
+files/*
+!files/.gitkeep
+
+# --- Backups & Wiederherstellung ---
+backup/
+restore/
+*.bak
+*.sql
+# Ausnahme: Falls du das Haupt-Schema im Git behalten willst:
+!create_tables.sql
+
+# --- Logs & Temporäre Daten ---
+log/
+logs/
+phptmp/
+atd/
+*.log
+
+# --- Programmiersprachen & Tooling ---
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Composer
+vendor/
+
+# Betriebssystem-spezifisch
+.DS_Store
+Thumbs.db
