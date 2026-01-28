@@ -19,6 +19,7 @@ restore/
 *.sql
 # Ausnahme: Falls du das Haupt-Schema im Git behalten willst:
 !create_tables.sql
+!create_tables_precious_metals.sql
 
 # --- Logs & Temporäre Daten ---
 log/
