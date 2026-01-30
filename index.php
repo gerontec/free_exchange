@@ -132,24 +132,28 @@ if ($exchange === 'metals') {
             ?>
             <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <?php if ($listing_image): ?>
-                <div style="margin-bottom: 15px; position: relative; overflow: hidden; border-radius: 5px;">
+                <div style="margin-bottom: 15px; position: relative; overflow: hidden; border-radius: 5px; cursor: pointer;"
+                     onclick="openLightbox('<?= htmlspecialchars($listing_image['filepath'], ENT_QUOTES) ?>', '<?= htmlspecialchars($l['title_de'], ENT_QUOTES) ?>')">
                     <img src="<?= htmlspecialchars($listing_image['filepath']) ?>"
                          class="img-fluid"
                          alt="<?= htmlspecialchars($l['title_de']) ?>"
-                         style="width: 100%; height: 250px; object-fit: cover; transition: transform 0.3s ease;"
-                         onmouseover="this.style.transform='scale(1.05)'"
-                         onmouseout="this.style.transform='scale(1)'">
+                         style="width: 100%; height: 120px; object-fit: cover; transition: all 0.3s ease;"
+                         onmouseover="this.style.transform='scale(1.05)'; this.style.filter='brightness(1.1)'"
+                         onmouseout="this.style.transform='scale(1)'; this.style.filter='brightness(1)'">
+                    <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.7em;">
+                        <i class="bi bi-zoom-in"></i>
+                    </div>
                     <?php if ($l['image_count'] > 1): ?>
-                    <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 3px; font-size: 0.85em;">
-                        <i class="bi bi-camera"></i> <?= $l['image_count'] ?> <?= ($current_lang === 'en') ? 'photos' : 'Fotos' ?>
+                    <div style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.75em;">
+                        <i class="bi bi-camera"></i> <?= $l['image_count'] ?>
                     </div>
                     <?php endif; ?>
                 </div>
                 <?php else: ?>
-                <div style="margin-bottom: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 250px; display: flex; align-items: center; justify-content: center; border-radius: 5px;">
+                <div style="margin-bottom: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 5px;">
                     <div style="text-align: center; color: white;">
-                        <i class="bi bi-gem" style="font-size: 3em;"></i>
-                        <p style="margin-top: 10px; font-size: 1.1em;"><?= ($current_lang === 'en') ? 'No image' : 'Kein Bild' ?></p>
+                        <i class="bi bi-gem" style="font-size: 2em;"></i>
+                        <p style="margin-top: 5px; font-size: 0.85em;"><?= ($current_lang === 'en') ? 'No image' : 'Kein Bild' ?></p>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -228,6 +232,45 @@ if ($exchange === 'metals') {
         <?php endforeach; ?>
     </div>
 </div>
+
+<!-- Lightbox Modal für Bildvergrößerung -->
+<div id="imageLightbox" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); overflow: auto;">
+    <span onclick="closeLightbox()" style="position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 10000;">&times;</span>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
+        <div style="max-width: 90%; max-height: 90vh;">
+            <img id="lightboxImage" src="" alt="" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 5px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+            <p id="lightboxCaption" style="color: white; text-align: center; padding: 15px; font-size: 18px; margin-top: 10px;"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+function openLightbox(imageSrc, caption) {
+    document.getElementById('imageLightbox').style.display = 'block';
+    document.getElementById('lightboxImage').src = imageSrc;
+    document.getElementById('lightboxCaption').textContent = caption;
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closeLightbox() {
+    document.getElementById('imageLightbox').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Re-enable scrolling
+}
+
+// ESC-Taste zum Schließen
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeLightbox();
+    }
+});
+
+// Click außerhalb des Bildes zum Schließen
+document.getElementById('imageLightbox').addEventListener('click', function(event) {
+    if (event.target.id === 'imageLightbox') {
+        closeLightbox();
+    }
+});
+</script>
 
 <?php
     include 'includes/footer.php';
