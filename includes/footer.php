@@ -26,6 +26,13 @@
             <hr class="bg-secondary">
             <div class="text-center text-white-50">
                 <p>&copy; 2026 Lagerraumbörse | <?= t('footer_rights') ?></p>
+                <p class="small mb-0">
+                    <span class="badge bg-secondary">v1.2.0</span>
+                    <span class="text-muted">|</span>
+                    <i class="bi bi-calendar-check"></i> Deploy: <?= date('Y-m-d H:i') ?>
+                    <span class="text-muted">|</span>
+                    <i class="bi bi-gear"></i> <?= PHP_VERSION ?>
+                </p>
             </div>
         </div>
     </footer>
