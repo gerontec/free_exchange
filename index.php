@@ -131,38 +131,23 @@ if ($exchange === 'metals') {
             $listing_image = $img_stmt->fetch();
             ?>
             <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <?php if ($listing_image): ?>
-                <div style="margin-bottom: 15px; position: relative; overflow: hidden; border-radius: 5px; cursor: pointer;"
-                     onclick="openLightbox('<?= htmlspecialchars($listing_image['filepath'], ENT_QUOTES) ?>', '<?= htmlspecialchars($l['title_de'], ENT_QUOTES) ?>')">
+                <h3 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <span>
+                        <?php
+                            $metal_icons = ['XAU' => '🥇', 'XAG' => '🥈', 'XPT' => '⚪', 'XPD' => '🔘'];
+                            echo $metal_icons[$l['metal_symbol']] ?? '💰';
+                        ?>
+                        <?= htmlspecialchars($l['title_de']) ?>
+                    </span>
+                    <?php if ($listing_image): ?>
                     <img src="<?= htmlspecialchars($listing_image['filepath']) ?>"
-                         class="img-fluid"
                          alt="<?= htmlspecialchars($l['title_de']) ?>"
-                         style="width: 100%; height: 120px; object-fit: cover; transition: all 0.3s ease;"
-                         onmouseover="this.style.transform='scale(1.05)'; this.style.filter='brightness(1.1)'"
-                         onmouseout="this.style.transform='scale(1)'; this.style.filter='brightness(1)'">
-                    <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.7em;">
-                        <i class="bi bi-zoom-in"></i>
-                    </div>
-                    <?php if ($l['image_count'] > 1): ?>
-                    <div style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.75em;">
-                        <i class="bi bi-camera"></i> <?= $l['image_count'] ?>
-                    </div>
+                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; transition: transform 0.2s ease;"
+                         onclick="openLightbox('<?= htmlspecialchars($listing_image['filepath'], ENT_QUOTES) ?>', '<?= htmlspecialchars($l['title_de'], ENT_QUOTES) ?>')"
+                         onmouseover="this.style.transform='scale(1.2)'"
+                         onmouseout="this.style.transform='scale(1)'"
+                         title="<?= ($current_lang === 'en') ? 'Click to enlarge' : 'Klicken zum Vergrößern' ?>">
                     <?php endif; ?>
-                </div>
-                <?php else: ?>
-                <div style="margin-bottom: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 5px;">
-                    <div style="text-align: center; color: white;">
-                        <i class="bi bi-gem" style="font-size: 2em;"></i>
-                        <p style="margin-top: 5px; font-size: 0.85em;"><?= ($current_lang === 'en') ? 'No image' : 'Kein Bild' ?></p>
-                    </div>
-                </div>
-                <?php endif; ?>
-                <h3>
-                    <?php
-                        $metal_icons = ['XAU' => '🥇', 'XAG' => '🥈', 'XPT' => '⚪', 'XPD' => '🔘'];
-                        echo $metal_icons[$l['metal_symbol']] ?? '💰';
-                    ?>
-                    <?= htmlspecialchars($l['title_de']) ?>
                 </h3>
 
                 <p>
