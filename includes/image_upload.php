@@ -5,12 +5,14 @@
 
 class ImageUpload {
     private $upload_dir;
+    private $upload_type;
     private $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     private $max_file_size = 5242880; // 5MB
     private $max_width = 1920;
     private $max_height = 1920;
-    
+
     public function __construct($type = 'storage') {
+        $this->upload_type = $type;
         $this->upload_dir = __DIR__ . '/../uploads/' . $type . '/';
         if (!is_dir($this->upload_dir)) {
             mkdir($this->upload_dir, 0755, true);
@@ -58,10 +60,10 @@ class ImageUpload {
         
         // Bild verarbeiten und speichern
         $this->processImage($file['tmp_name'], $filepath, $mime_type);
-        
+
         return [
             'filename' => $filename,
-            'filepath' => 'uploads/' . basename(dirname($this->upload_dir)) . '/' . $filename,
+            'filepath' => 'uploads/' . $this->upload_type . '/' . $filename,
             'filesize' => filesize($filepath)
         ];
     }
