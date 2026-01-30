@@ -71,7 +71,7 @@ CREATE TABLE `em_listings` (
   `price_per_unit` decimal(12,2) NOT NULL COMMENT 'Preis pro Einheit in EUR/USD',
   `currency_code` varchar(3) DEFAULT 'EUR',
   `total_price` decimal(15,2) GENERATED ALWAYS AS (`quantity` * `price_per_unit`) STORED,
-  `purity` decimal(5,3) DEFAULT 999.900 COMMENT 'Feingehalt z.B. 999.9 für 24k Gold',
+  `purity` decimal(6,3) DEFAULT 999.000 COMMENT 'Feingehalt z.B. 999.9 für 24k Gold',
   `form` enum('barren','muenzen','granulat','schmuck','other') DEFAULT 'barren',
   `manufacturer` varchar(100) DEFAULT NULL COMMENT 'Hersteller/Prägestätte',
   `certification` varchar(100) DEFAULT NULL COMMENT 'z.B. LBMA, SGE zertifiziert',
