@@ -396,4 +396,43 @@ include 'includes/header.php';
     </div>
 </div>
 
+<!-- Lightbox Modal für Bildvergrößerung -->
+<div id="imageLightbox" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); overflow: auto;">
+    <span onclick="closeLightbox()" style="position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 10000;">&times;</span>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
+        <div style="max-width: 90%; max-height: 90vh;">
+            <img id="lightboxImage" src="" alt="" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 5px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+            <p id="lightboxCaption" style="color: white; text-align: center; padding: 15px; font-size: 18px; margin-top: 10px;"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+function openLightbox(imageSrc, caption) {
+    document.getElementById('imageLightbox').style.display = 'block';
+    document.getElementById('lightboxImage').src = imageSrc;
+    document.getElementById('lightboxCaption').textContent = caption;
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    document.getElementById('imageLightbox').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// ESC-Taste zum Schließen
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeLightbox();
+    }
+});
+
+// Click außerhalb des Bildes zum Schließen
+document.getElementById('imageLightbox').addEventListener('click', function(event) {
+    if (event.target.id === 'imageLightbox') {
+        closeLightbox();
+    }
+});
+</script>
+
 <?php include 'includes/footer.php'; ?>
