@@ -49,13 +49,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Lagerraum erstellen
         $stmt = $pdo->prepare("
             INSERT INTO lg_lagerraeume (
-                anbieter_id, adresse_id, anzahl_raeume, qm_gesamt, 
-                preis_pro_qm, beheizt, klimatisiert, zugang_24_7, 
-                alarm_vorhanden, rolltor, verfuegbar_ab, bemerkung, typ
+                anbieter_id, adresse_id, anzahl_raeume, qm_gesamt,
+                preis_pro_qm, beheizt, klimatisiert, zugang_24_7,
+                alarm_vorhanden, rolltor, verfuegbar_ab, typ
             ) VALUES (
                 :anbieter_id, :adresse_id, :anzahl_raeume, :qm_gesamt,
                 :preis_pro_qm, :beheizt, :klimatisiert, :zugang_24_7,
-                :alarm_vorhanden, :rolltor, :verfuegbar_ab, :bemerkung, 'angebot'
+                :alarm_vorhanden, :rolltor, :verfuegbar_ab, 'angebot'
             )
         ");
         $stmt->execute([
@@ -69,8 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':zugang_24_7' => isset($_POST['zugang_24_7']) ? 1 : 0,
             ':alarm_vorhanden' => isset($_POST['alarm_vorhanden']) ? 1 : 0,
             ':rolltor' => isset($_POST['rolltor']) ? 1 : 0,
-            ':verfuegbar_ab' => !empty($_POST['verfuegbar_ab']) ? $_POST['verfuegbar_ab'] : null,
-            ':bemerkung' => $_POST['bemerkung'] ?? ''
+            ':verfuegbar_ab' => !empty($_POST['verfuegbar_ab']) ? $_POST['verfuegbar_ab'] : null
         ]);
         $lagerraum_id = $pdo->lastInsertId();
         
@@ -228,12 +227,7 @@ include 'includes/header.php';
                 <input type="file" name="images[]" class="form-control" multiple accept="image/*">
                 <small class="text-muted">Sie können mehrere Bilder auswählen. Erstes Bild = Hauptbild</small>
             </div>
-            
-            <div class="mb-4">
-                <label class="form-label"><?= t('remarks') ?></label>
-                <textarea name="bemerkung" class="form-control" rows="4"></textarea>
-            </div>
-            
+
             <button type="submit" class="btn btn-success btn-lg">
                 <i class="bi bi-check-circle"></i> <?= t('btn_publish') ?>
             </button>
