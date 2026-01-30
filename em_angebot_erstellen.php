@@ -4,6 +4,8 @@
  */
 require_once 'includes/config.php';
 require_once 'includes/auth.php';
+require_once 'includes/image_upload.php';
+require_once 'includes/lang.php';
 
 requireLogin();
 
@@ -84,6 +86,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $new_listing_id = $pdo->lastInsertId();
 
+        // Bilder hochladen
+        if (isset($_FILES['images']) && $_FILES['images']['error'][0] !== UPLOAD_ERR_NO_FILE) {
+            try {
+                $imageUpload = new ImageUpload('metals');
+                $uploaded_images = $imageUpload->uploadMultiple($_FILES['images'], 'em_' . $new_listing_id);
+
+                foreach ($uploaded_images as $index => $img) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO em_images (listing_id, filename, filepath, image_type, sort_order)
+                        VALUES (:listing_id, :filename, :filepath, :image_type, :sort_order)
+                    ");
+                    $stmt->execute([
+                        ':listing_id' => $new_listing_id,
+                        ':filename' => $img['filename'],
+                        ':filepath' => $img['filepath'],
+                        ':image_type' => $index === 0 ? 'main' : 'detail',
+                        ':sort_order' => $index
+                    ]);
+                }
+            } catch (Exception $e) {
+                // Fehler beim Upload, aber Angebot wurde erstellt
+                $error = "Angebot erstellt, aber Fehler beim Bild-Upload: " . $e->getMessage();
+            }
+        }
+
         $pdo->commit();
         $success = true;
 
@@ -114,7 +141,7 @@ include 'includes/header.php';
 <?php if (!$success): ?>
 <div class="card">
     <div class="card-body">
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <!-- Metall & Typ -->
             <h4 class="mb-3"><i class="bi bi-gem"></i> <?= t('metal_details') ?? 'Metall-Details' ?></h4>
             <div class="row g-3 mb-4">
@@ -289,6 +316,16 @@ include 'includes/header.php';
                         </label>
                     </div>
                 </div>
+            </div>
+
+            <!-- Bilder hochladen -->
+            <h4 class="mb-3 mt-4"><i class="bi bi-camera"></i> <?= t('photos') ?? 'Fotos' ?></h4>
+            <div class="mb-4">
+                <label class="form-label"><?= t('upload_photos') ?? 'Fotos hochladen' ?> (max. 5 Bilder, je max. 5MB)</label>
+                <input type="file" name="images[]" class="form-control" accept="image/*" multiple>
+                <small class="text-muted">
+                    <?= t('photo_hint') ?? 'Erlaubt: JPG, PNG, GIF, WEBP. Das erste Bild wird als Hauptbild verwendet.' ?>
+                </small>
             </div>
 
             <div class="d-flex gap-2">

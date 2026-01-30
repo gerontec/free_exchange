@@ -112,10 +112,24 @@ include 'includes/header.php';
     </div>
 <?php else: ?>
     <?php foreach ($listings as $l): ?>
+    <?php
+    // Bilder laden
+    $images_stmt = $pdo->prepare("SELECT * FROM em_images WHERE listing_id = :id ORDER BY sort_order LIMIT 1");
+    $images_stmt->execute([':id' => $l['listing_id']]);
+    $main_image = $images_stmt->fetch();
+    ?>
     <div class="card mb-3">
         <div class="card-body">
             <div class="row">
-                <div class="col-md-8">
+                <?php if ($main_image): ?>
+                <div class="col-md-3 mb-3">
+                    <img src="<?= htmlspecialchars($main_image['filepath']) ?>"
+                         class="img-fluid rounded"
+                         alt="<?= htmlspecialchars($l['title_de']) ?>"
+                         style="object-fit: cover; width: 100%; height: 200px;">
+                </div>
+                <?php endif; ?>
+                <div class="col-md-<?= $main_image ? '5' : '8' ?>">
                     <h4 class="card-title">
                         <?php
                             $metal_icons = ['XAU' => '🥇', 'XAG' => '🥈', 'XPT' => '⚪', 'XPD' => '🔘'];

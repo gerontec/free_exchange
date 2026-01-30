@@ -124,7 +124,21 @@ if ($exchange === 'metals') {
         <?php endif; ?>
 
         <?php foreach ($listings as $l): ?>
+            <?php
+            // Bilder laden
+            $img_stmt = $pdo->prepare("SELECT * FROM em_images WHERE listing_id = :id ORDER BY sort_order LIMIT 1");
+            $img_stmt->execute([':id' => $l['listing_id']]);
+            $listing_image = $img_stmt->fetch();
+            ?>
             <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                <?php if ($listing_image): ?>
+                <div style="margin-bottom: 15px;">
+                    <img src="<?= htmlspecialchars($listing_image['filepath']) ?>"
+                         class="img-fluid rounded"
+                         alt="<?= htmlspecialchars($l['title_de']) ?>"
+                         style="width: 100%; height: 250px; object-fit: cover;">
+                </div>
+                <?php endif; ?>
                 <h3>
                     <?php
                         $metal_icons = ['XAU' => '🥇', 'XAG' => '🥈', 'XPT' => '⚪', 'XPD' => '🔘'];
