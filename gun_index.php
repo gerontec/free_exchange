@@ -243,22 +243,18 @@ include 'includes/header.php';
                                     <?= $license_icons[$item['license_required']] ?? $item['license_required'] ?>
                                 </span>
                             </div>
-                            
-                            <?php if ($item['description']): ?>
+
+                            <?php if (!empty($item['includes_accessories'])): ?>
                                 <p class="card-text text-muted">
-                                    <?= nl2br(htmlspecialchars(substr($item['description'], 0, 200))) ?>
-                                    <?= strlen($item['description']) > 200 ? '...' : '' ?>
+                                    <strong>Zubehör:</strong> <?= nl2br(htmlspecialchars(substr($item['includes_accessories'], 0, 200))) ?>
+                                    <?= strlen($item['includes_accessories']) > 200 ? '...' : '' ?>
                                 </p>
                             <?php endif; ?>
-                            
+
                             <div class="small text-muted">
-                                <i class="bi bi-geo-alt"></i> <?= htmlspecialchars($item['plz'] . ' ' . $item['ort']) ?>
-                                <?php if ($item['shipping_possible']): ?>
+                                <i class="bi bi-geo-alt"></i> <?= htmlspecialchars(($item['plz'] ?? '') . ' ' . ($item['ort'] ?? 'Standort nicht angegeben')) ?>
+                                <?php if (!empty($item['shipping_possible'])): ?>
                                     | <i class="bi bi-truck"></i> Versand möglich
-                                <?php endif; ?>
-                                <?php if ($item['seller_rating']): ?>
-                                    | <i class="bi bi-star-fill text-warning"></i> 
-                                    <?= number_format($item['seller_rating'], 1) ?>
                                 <?php endif; ?>
                             </div>
                         </div>
