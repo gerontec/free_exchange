@@ -1,6 +1,7 @@
 <?php
 require_once 'includes/config.php';
 require_once 'includes/auth.php';
+require_once 'includes/image_upload.php';
 
 requireLogin();
 
@@ -26,11 +27,40 @@ if (!$angebot) {
     exit;
 }
 
+// Bilder für diesen Lagerraum laden
+$stmt = $pdo->prepare("SELECT * FROM lg_images WHERE lagerraum_id = :id ORDER BY sort_order");
+$stmt->execute([':id' => $lagerraum_id]);
+$images = $stmt->fetchAll();
+
 $success = false;
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Bild löschen
+if (isset($_POST['delete_image'])) {
+    $image_id = (int)$_POST['delete_image'];
+
+    // Bild aus DB holen
+    $stmt = $pdo->prepare("SELECT * FROM lg_images WHERE image_id = :id AND lagerraum_id = :lagerraum_id");
+    $stmt->execute([':id' => $image_id, ':lagerraum_id' => $lagerraum_id]);
+    $image = $stmt->fetch();
+
+    if ($image) {
+        // Datei löschen
+        $imageUpload = new ImageUpload('storage');
+        $imageUpload->delete($image['filename']);
+
+        // Aus DB löschen
+        $stmt = $pdo->prepare("DELETE FROM lg_images WHERE image_id = :id");
+        $stmt->execute([':id' => $image_id]);
+
+        header('Location: angebot_bearbeiten.php?id=' . $lagerraum_id);
+        exit;
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['delete_image'])) {
     try {
+        $pdo->beginTransaction();
         $stmt = $pdo->prepare("
             UPDATE lg_adressen 
             SET strasse = :strasse, hausnummer = :hausnummer, 
@@ -70,9 +100,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':aktiv' => isset($_POST['aktiv']) ? 1 : 0,
             ':id' => $lagerraum_id
         ]);
-        
+
+        // Neue Bilder hochladen
+        if (isset($_FILES['images']) && $_FILES['images']['error'][0] !== UPLOAD_ERR_NO_FILE) {
+            try {
+                $imageUpload = new ImageUpload('storage');
+                $uploaded_images = $imageUpload->uploadMultiple($_FILES['images'], 'lg_' . $lagerraum_id);
+
+                // Höchste Sort-Order ermitteln
+                $stmt = $pdo->prepare("SELECT MAX(sort_order) as max_order FROM lg_images WHERE lagerraum_id = :id");
+                $stmt->execute([':id' => $lagerraum_id]);
+                $max_order = $stmt->fetch()['max_order'] ?? -1;
+
+                foreach ($uploaded_images as $index => $img) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO lg_images (lagerraum_id, filename, filepath, image_type, sort_order)
+                        VALUES (:lagerraum_id, :filename, :filepath, :image_type, :sort_order)
+                    ");
+                    $stmt->execute([
+                        ':lagerraum_id' => $lagerraum_id,
+                        ':filename' => $img['filename'],
+                        ':filepath' => $img['filepath'],
+                        ':image_type' => 'detail',
+                        ':sort_order' => $max_order + $index + 1
+                    ]);
+                }
+            } catch (Exception $e) {
+                // Fehler beim Upload, aber Angebot wurde aktualisiert
+                $error = "Angebot aktualisiert, aber Fehler beim Bild-Upload: " . $e->getMessage();
+            }
+        }
+
+        $pdo->commit();
         $success = true;
-        
+
+        // Lagerraum und Bilder neu laden
         $stmt = $pdo->prepare("
             SELECT l.*, a.*
             FROM lg_lagerraeume l
@@ -81,8 +143,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([':id' => $lagerraum_id]);
         $angebot = $stmt->fetch();
-        
+
+        $stmt = $pdo->prepare("SELECT * FROM lg_images WHERE lagerraum_id = :id ORDER BY sort_order");
+        $stmt->execute([':id' => $lagerraum_id]);
+        $images = $stmt->fetchAll();
+
     } catch (Exception $e) {
+        $pdo->rollBack();
         $error = "Error: " . $e->getMessage();
     }
 }
@@ -106,7 +173,7 @@ include 'includes/header.php';
 
 <div class="card">
     <div class="card-body">
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <h4 class="mb-3"><?= t('offer_address') ?></h4>
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
@@ -206,10 +273,56 @@ include 'includes/header.php';
             
             <div class="mb-4">
                 <label class="form-label"><?= t('remarks') ?></label>
-                <textarea name="bemerkung" class="form-control" rows="4" 
+                <textarea name="bemerkung" class="form-control" rows="4"
                           placeholder="<?= t('remarks_placeholder') ?>"><?= htmlspecialchars($angebot['bemerkung']) ?></textarea>
             </div>
-            
+
+            <!-- Bilder verwalten -->
+            <h4 class="mb-3 mt-4"><i class="bi bi-camera"></i> <?= t('photos') ?? 'Fotos' ?></h4>
+
+            <!-- Vorhandene Bilder -->
+            <?php if (!empty($images)): ?>
+            <div class="row g-3 mb-3">
+                <?php foreach ($images as $img): ?>
+                <div class="col-md-3">
+                    <div class="card" style="position: relative;">
+                        <img src="<?= htmlspecialchars($img['filepath']) ?>"
+                             class="card-img-top"
+                             alt="Lagerraum"
+                             style="height: 200px; object-fit: cover;">
+                        <div class="card-body p-2">
+                            <form method="POST" style="margin: 0;">
+                                <input type="hidden" name="delete_image" value="<?= $img['image_id'] ?>">
+                                <button type="submit" class="btn btn-danger btn-sm w-100"
+                                        onclick="return confirm('<?= t('confirm_delete_image') ?? 'Bild wirklich löschen?' ?>')">
+                                    <i class="bi bi-trash"></i> <?= t('btn_delete') ?? 'Löschen' ?>
+                                </button>
+                            </form>
+                        </div>
+                        <?php if ($img['image_type'] === 'main'): ?>
+                        <div class="badge bg-primary" style="position: absolute; top: 5px; right: 5px;">
+                            <?= t('main_image') ?? 'Hauptbild' ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> <?= t('no_images_yet') ?? 'Noch keine Bilder vorhanden.' ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- Neue Bilder hochladen -->
+            <div class="mb-4">
+                <label class="form-label"><?= t('upload_new_photos') ?? 'Neue Fotos hochladen' ?> (max. 5 Bilder, je max. 5MB)</label>
+                <input type="file" name="images[]" class="form-control" accept="image/*" multiple>
+                <small class="text-muted">
+                    <?= t('photo_hint') ?? 'Erlaubt: JPG, PNG, GIF, WEBP. Die Bilder werden zusätzlich zu den vorhandenen Bildern hinzugefügt.' ?>
+                </small>
+            </div>
+
             <div class="mb-4">
                 <div class="form-check form-switch">
                     <input type="checkbox" name="aktiv" class="form-check-input" 

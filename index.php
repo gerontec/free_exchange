@@ -269,7 +269,7 @@ document.getElementById('imageLightbox').addEventListener('click', function(even
 // 2. Filter-Parameter (Sanitized)
 $plz = $_GET['plz'] ?? '';
 $ort = $_GET['ort'] ?? '';
-$land = $_GET['land'] ?? 'DE';
+$land = $_GET['land'] ?? ''; // Kein Default - zeige alle Länder
 $qm_min = !empty($_GET['qm_min']) ? (float)$_GET['qm_min'] : null;
 $qm_max = !empty($_GET['qm_max']) ? (float)$_GET['qm_max'] : null;
 $preis_max = !empty($_GET['preis_max']) ? (float)$_GET['preis_max'] : null;
@@ -329,6 +329,7 @@ include 'includes/header.php';
                 <input type="text" name="plz" placeholder="PLZ" value="<?= htmlspecialchars($plz) ?>">
                 <input type="text" name="ort" placeholder="Ort" value="<?= htmlspecialchars($ort) ?>">
                 <select name="land">
+                    <option value="" <?= $land === '' ? 'selected' : '' ?>><?= ($current_lang === 'en') ? 'All Countries' : 'Alle Länder' ?></option>
                     <option value="DE" <?= $land == 'DE' ? 'selected' : '' ?>>Deutschland</option>
                     <option value="AT" <?= $land == 'AT' ? 'selected' : '' ?>>Österreich</option>
                     <option value="CH" <?= $land == 'CH' ? 'selected' : '' ?>>Schweiz</option>
@@ -344,18 +345,33 @@ include 'includes/header.php';
 
     <div class="grid">
         <?php foreach ($angebote as $a): ?>
+            <?php
+            // Bilder laden
+            $img_stmt = $pdo->prepare("SELECT * FROM lg_images WHERE lagerraum_id = :id ORDER BY sort_order LIMIT 1");
+            $img_stmt->execute([':id' => $a['lagerraum_id']]);
+            $storage_image = $img_stmt->fetch();
+            ?>
             <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
-                <h3>📦 <?= htmlspecialchars($a['ort']) ?> - <?= number_format($a['qm_gesamt'], 1, ',', '.') ?> m²</h3>
+                <h3 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <span>📦 <?= htmlspecialchars($a['ort']) ?> - <?= number_format($a['qm_gesamt'], 1, ',', '.') ?> m²</span>
+                    <?php if ($storage_image): ?>
+                    <img src="<?= htmlspecialchars($storage_image['filepath']) ?>"
+                         alt="Lagerraum"
+                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; transition: transform 0.2s ease;"
+                         onclick="openLightbox('<?= htmlspecialchars($storage_image['filepath'], ENT_QUOTES) ?>', '<?= htmlspecialchars($a['ort'] . ' - ' . $a['qm_gesamt'] . ' m²', ENT_QUOTES) ?>')"
+                         onmouseover="this.style.transform='scale(1.2)'"
+                         onmouseout="this.style.transform='scale(1)'"
+                         title="<?= ($current_lang === 'en') ? 'Click to enlarge' : 'Klicken zum Vergrößern' ?>">
+                    <?php endif; ?>
+                </h3>
                 
                 <p><strong>📍 <?= htmlspecialchars($a['plz'] . ' ' . $a['ort']) ?></strong> (<?= htmlspecialchars($a['land']) ?>)</p>
-                
-                <div class="description" style="font-style: italic; color: #555;">
-                    <?php 
-                        // Sprach-Logik: Falls englisch gewünscht aber leer, Fallback auf Deutsch
-                        $desc = (!empty($a['bemerkung' . $suffix])) ? $a['bemerkung' . $suffix] : $a['bemerkung_de'];
-                        echo nl2br(htmlspecialchars($desc));
-                    ?>
+
+                <?php if (!empty($a['strasse'])): ?>
+                <div class="description" style="font-style: italic; color: #555; margin-bottom: 10px;">
+                    <?= htmlspecialchars($a['strasse'] . ' ' . ($a['hausnummer'] ?? '')) ?>
                 </div>
+                <?php endif; ?>
 
                 <div class="details" style="margin-top: 10px;">
                     <span class="badge"><?= $a['beheizt'] ? '🔥 Beheizt' : '❄️ Unbeheizt' ?></span>
@@ -363,8 +379,8 @@ include 'includes/header.php';
                 </div>
 
                 <div class="price" style="font-weight: bold; font-size: 1.2em; margin-top: 10px; color: #2c3e50;">
-                    <?= number_format($a['preis_pro_qm'], 2, ',', '.') ?> €/m² 
-                    <small>(Total: <?= number_format($a['preis_gesamt'], 2, ',', '.') ?> €)</small>
+                    <?= number_format($a['preis_pro_qm'], 2, ',', '.') ?> €/m²
+                    <small>(Total: <?= number_format($a['preis_pro_qm'] * $a['qm_gesamt'], 2, ',', '.') ?> €)</small>
                 </div>
 
                 <div class="footer" style="margin-top: 15px; font-size: 0.85em; border-top: 1px solid #eee; padding-top: 10px;">
@@ -379,5 +395,44 @@ include 'includes/header.php';
         <?php endforeach; ?>
     </div>
 </div>
+
+<!-- Lightbox Modal für Bildvergrößerung -->
+<div id="imageLightbox" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); overflow: auto;">
+    <span onclick="closeLightbox()" style="position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 10000;">&times;</span>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
+        <div style="max-width: 90%; max-height: 90vh;">
+            <img id="lightboxImage" src="" alt="" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 5px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+            <p id="lightboxCaption" style="color: white; text-align: center; padding: 15px; font-size: 18px; margin-top: 10px;"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+function openLightbox(imageSrc, caption) {
+    document.getElementById('imageLightbox').style.display = 'block';
+    document.getElementById('lightboxImage').src = imageSrc;
+    document.getElementById('lightboxCaption').textContent = caption;
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    document.getElementById('imageLightbox').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// ESC-Taste zum Schließen
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeLightbox();
+    }
+});
+
+// Click außerhalb des Bildes zum Schließen
+document.getElementById('imageLightbox').addEventListener('click', function(event) {
+    if (event.target.id === 'imageLightbox') {
+        closeLightbox();
+    }
+});
+</script>
 
 <?php include 'includes/footer.php'; ?>

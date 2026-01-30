@@ -1,84 +1,112 @@
 <?php
-require_once 'includes/config.php';
-require_once 'includes/auth.php';
-require_once 'includes/image_upload.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-requireLogin();
+try {
+    require_once 'includes/config.php';
+    require_once 'includes/auth.php';
+    require_once 'includes/lang.php';
+    require_once 'includes/image_upload.php';
 
-$user = getCurrentUser();
-$pageTitle = t('create_offer_title');
+    requireLogin();
+
+    $user = getCurrentUser();
+    $pageTitle = t('create_offer_title') ?? 'Angebot erstellen';
+
+    // LAENDER-Array fallback
+    if (!isset($LAENDER)) {
+        $LAENDER = [
+            'DE' => 'Deutschland',
+            'AT' => 'Österreich',
+            'CH' => 'Schweiz'
+        ];
+    }
+} catch (Exception $e) {
+    die("Initialization Error: " . $e->getMessage() . "<br>File: " . $e->getFile() . "<br>Line: " . $e->getLine());
+}
 
 $success = false;
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        $pdo->beginTransaction();
+
         // Adresse erstellen
         $stmt = $pdo->prepare("
-            INSERT INTO lg_adressen (strasse, hausnummer, plz, ort, land) 
+            INSERT INTO lg_adressen (strasse, hausnummer, plz, ort, land)
             VALUES (:strasse, :hausnummer, :plz, :ort, :land)
         ");
         $stmt->execute([
-            ':strasse' => $_POST['strasse'],
-            ':hausnummer' => $_POST['hausnummer'],
-            ':plz' => $_POST['plz'],
-            ':ort' => $_POST['ort'],
-            ':land' => $_POST['land'] ?: 'DE'
+            ':strasse' => $_POST['strasse'] ?? '',
+            ':hausnummer' => $_POST['hausnummer'] ?? '',
+            ':plz' => $_POST['plz'] ?? '',
+            ':ort' => $_POST['ort'] ?? '',
+            ':land' => $_POST['land'] ?? 'DE'
         ]);
         $adresse_id = $pdo->lastInsertId();
         
         // Lagerraum erstellen
         $stmt = $pdo->prepare("
             INSERT INTO lg_lagerraeume (
-                anbieter_id, adresse_id, anzahl_raeume, qm_gesamt, 
-                preis_pro_qm, beheizt, klimatisiert, zugang_24_7, 
-                alarm_vorhanden, rolltor, verfuegbar_ab, bemerkung, typ
+                anbieter_id, adresse_id, anzahl_raeume, qm_gesamt,
+                preis_pro_qm, beheizt, klimatisiert, zugang_24_7,
+                alarm_vorhanden, rolltor, verfuegbar_ab, typ
             ) VALUES (
                 :anbieter_id, :adresse_id, :anzahl_raeume, :qm_gesamt,
                 :preis_pro_qm, :beheizt, :klimatisiert, :zugang_24_7,
-                :alarm_vorhanden, :rolltor, :verfuegbar_ab, :bemerkung, 'angebot'
+                :alarm_vorhanden, :rolltor, :verfuegbar_ab, 'angebot'
             )
         ");
         $stmt->execute([
             ':anbieter_id' => $user['user_id'],
             ':adresse_id' => $adresse_id,
-            ':anzahl_raeume' => $_POST['anzahl_raeume'],
-            ':qm_gesamt' => $_POST['qm_gesamt'],
-            ':preis_pro_qm' => $_POST['preis_pro_qm'],
+            ':anzahl_raeume' => (int)($_POST['anzahl_raeume'] ?? 1),
+            ':qm_gesamt' => (float)($_POST['qm_gesamt'] ?? 0),
+            ':preis_pro_qm' => (float)($_POST['preis_pro_qm'] ?? 0),
             ':beheizt' => isset($_POST['beheizt']) ? 1 : 0,
             ':klimatisiert' => isset($_POST['klimatisiert']) ? 1 : 0,
             ':zugang_24_7' => isset($_POST['zugang_24_7']) ? 1 : 0,
             ':alarm_vorhanden' => isset($_POST['alarm_vorhanden']) ? 1 : 0,
             ':rolltor' => isset($_POST['rolltor']) ? 1 : 0,
-            ':verfuegbar_ab' => $_POST['verfuegbar_ab'] ?: null,
-            ':bemerkung' => $_POST['bemerkung']
+            ':verfuegbar_ab' => !empty($_POST['verfuegbar_ab']) ? $_POST['verfuegbar_ab'] : null
         ]);
         $lagerraum_id = $pdo->lastInsertId();
         
         // Bilder hochladen
-        if (!empty($_FILES['images']['name'][0])) {
-            $uploader = new ImageUpload('storage');
-            $uploaded_images = $uploader->uploadMultiple($_FILES['images'], 'storage_' . $lagerraum_id);
-            
-            foreach ($uploaded_images as $index => $img) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO lg_bilder (lagerraum_id, filename, filepath, filesize, is_main, sort_order)
-                    VALUES (:lagerraum_id, :filename, :filepath, :filesize, :is_main, :sort_order)
-                ");
-                $stmt->execute([
-                    ':lagerraum_id' => $lagerraum_id,
-                    ':filename' => $img['filename'],
-                    ':filepath' => $img['filepath'],
-                    ':filesize' => $img['filesize'],
-                    ':is_main' => $index === 0 ? 1 : 0,
-                    ':sort_order' => $index
-                ]);
+        if (isset($_FILES['images']) && $_FILES['images']['error'][0] !== UPLOAD_ERR_NO_FILE) {
+            try {
+                $imageUpload = new ImageUpload('storage');
+                $uploaded_images = $imageUpload->uploadMultiple($_FILES['images'], 'lg_' . $lagerraum_id);
+
+                foreach ($uploaded_images as $index => $img) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO lg_images (lagerraum_id, filename, filepath, image_type, sort_order)
+                        VALUES (:lagerraum_id, :filename, :filepath, :image_type, :sort_order)
+                    ");
+                    $stmt->execute([
+                        ':lagerraum_id' => $lagerraum_id,
+                        ':filename' => $img['filename'],
+                        ':filepath' => $img['filepath'],
+                        ':image_type' => $index === 0 ? 'main' : 'detail',
+                        ':sort_order' => $index
+                    ]);
+                }
+            } catch (Exception $e) {
+                // Fehler beim Upload, aber Angebot wurde erstellt
+                $error = "Angebot erstellt, aber Fehler beim Bild-Upload: " . $e->getMessage();
             }
         }
-        
+
+        $pdo->commit();
         $success = true;
+
     } catch (Exception $e) {
-        $error = "Fehler: " . $e->getMessage();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $error = "Fehler: " . $e->getMessage() . " (Line: " . $e->getLine() . ", File: " . basename($e->getFile()) . ")";
+        error_log("Storage creation error: " . $e->getMessage());
     }
 }
 
@@ -199,12 +227,7 @@ include 'includes/header.php';
                 <input type="file" name="images[]" class="form-control" multiple accept="image/*">
                 <small class="text-muted">Sie können mehrere Bilder auswählen. Erstes Bild = Hauptbild</small>
             </div>
-            
-            <div class="mb-4">
-                <label class="form-label"><?= t('remarks') ?></label>
-                <textarea name="bemerkung" class="form-control" rows="4"></textarea>
-            </div>
-            
+
             <button type="submit" class="btn btn-success btn-lg">
                 <i class="bi bi-check-circle"></i> <?= t('btn_publish') ?>
             </button>
