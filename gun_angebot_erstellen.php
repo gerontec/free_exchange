@@ -1,4 +1,7 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once 'includes/config.php';
 require_once 'includes/auth.php';
 
@@ -16,11 +19,13 @@ $manufacturers = $pdo->query("SELECT * FROM gun_manufacturers WHERE aktiv = 1 OR
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        $pdo->beginTransaction();
+
         // Optional: Adresse erstellen falls angegeben
         $adresse_id = null;
         if (!empty($_POST['plz']) && !empty($_POST['ort'])) {
             $stmt = $pdo->prepare("
-                INSERT INTO lg_adressen (strasse, hausnummer, plz, ort, land) 
+                INSERT INTO lg_adressen (strasse, hausnummer, plz, ort, land)
                 VALUES (:strasse, :hausnummer, :plz, :ort, :land)
             ");
             $stmt->execute([
@@ -32,8 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             $adresse_id = $pdo->lastInsertId();
         }
-        
-        // Waffen-Angebot erstellen
+
+        // Waffen-Angebot erstellen (ohne description Spalte)
         $stmt = $pdo->prepare("
             INSERT INTO gun_listings (
                 seller_id, category_id, manufacturer_id, adresse_id,
@@ -41,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 year_manufactured, serial_number, condition_rating, rounds_fired,
                 price, price_negotiable, includes_case, includes_magazines,
                 includes_accessories, has_wbk, wbk_transferable, proof_marks,
-                description, shipping_possible, shipping_cost, pickup_only,
+                shipping_possible, shipping_cost, pickup_only,
                 listing_type, expires_at
             ) VALUES (
                 :seller_id, :category_id, :manufacturer_id, :adresse_id,
@@ -49,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 :year_manufactured, :serial_number, :condition_rating, :rounds_fired,
                 :price, :price_negotiable, :includes_case, :includes_magazines,
                 :includes_accessories, :has_wbk, :wbk_transferable, :proof_marks,
-                :description, :shipping_possible, :shipping_cost, :pickup_only,
+                :shipping_possible, :shipping_cost, :pickup_only,
                 :listing_type, DATE_ADD(NOW(), INTERVAL 60 DAY)
             )
         ");
@@ -76,16 +81,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':has_wbk' => isset($_POST['has_wbk']) ? 1 : 0,
             ':wbk_transferable' => isset($_POST['wbk_transferable']) ? 1 : 0,
             ':proof_marks' => $_POST['proof_marks'] ?: null,
-            ':description' => $_POST['description'],
             ':shipping_possible' => isset($_POST['shipping_possible']) ? 1 : 0,
             ':shipping_cost' => $_POST['shipping_cost'] ?: null,
             ':pickup_only' => isset($_POST['pickup_only']) ? 1 : 0,
             ':listing_type' => $_POST['listing_type'] ?: 'verkauf'
         ]);
-        
+
+        $pdo->commit();
         $success = true;
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $error = "Fehler: " . $e->getMessage();
+        error_log("gun_angebot_erstellen.php error: " . $e->getMessage());
     }
 }
 
@@ -336,10 +345,11 @@ include 'includes/header.php';
             </div>
             
             <!-- Beschreibung -->
-            <h4 class="mb-3">Beschreibung</h4>
+            <h4 class="mb-3">Beschreibung (optional)</h4>
             <div class="mb-4">
-                <textarea name="description" class="form-control" rows="6" required
+                <textarea name="description" class="form-control" rows="6"
                           placeholder="Detaillierte Beschreibung der Waffe, Zustand, Besonderheiten, etc."></textarea>
+                <small class="text-muted">Hinweis: Beschreibungsfeld wird derzeit nicht gespeichert (in Entwicklung)</small>
             </div>
             
             <!-- Angebotstyp -->
