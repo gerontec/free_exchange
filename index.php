@@ -344,8 +344,25 @@ include 'includes/header.php';
 
     <div class="grid">
         <?php foreach ($angebote as $a): ?>
+            <?php
+            // Bilder laden
+            $img_stmt = $pdo->prepare("SELECT * FROM lg_images WHERE lagerraum_id = :id ORDER BY sort_order LIMIT 1");
+            $img_stmt->execute([':id' => $a['lagerraum_id']]);
+            $storage_image = $img_stmt->fetch();
+            ?>
             <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
-                <h3>📦 <?= htmlspecialchars($a['ort']) ?> - <?= number_format($a['qm_gesamt'], 1, ',', '.') ?> m²</h3>
+                <h3 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <span>📦 <?= htmlspecialchars($a['ort']) ?> - <?= number_format($a['qm_gesamt'], 1, ',', '.') ?> m²</span>
+                    <?php if ($storage_image): ?>
+                    <img src="<?= htmlspecialchars($storage_image['filepath']) ?>"
+                         alt="Lagerraum"
+                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; transition: transform 0.2s ease;"
+                         onclick="openLightbox('<?= htmlspecialchars($storage_image['filepath'], ENT_QUOTES) ?>', '<?= htmlspecialchars($a['ort'] . ' - ' . $a['qm_gesamt'] . ' m²', ENT_QUOTES) ?>')"
+                         onmouseover="this.style.transform='scale(1.2)'"
+                         onmouseout="this.style.transform='scale(1)'"
+                         title="<?= ($current_lang === 'en') ? 'Click to enlarge' : 'Klicken zum Vergrößern' ?>">
+                    <?php endif; ?>
+                </h3>
                 
                 <p><strong>📍 <?= htmlspecialchars($a['plz'] . ' ' . $a['ort']) ?></strong> (<?= htmlspecialchars($a['land']) ?>)</p>
                 
