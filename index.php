@@ -78,6 +78,8 @@ if ($exchange === 'metals') {
 <div class="container">
     <h2><?= ($current_lang === 'en') ? 'Precious Metals Exchange' : 'Edelmetall-Börse' ?></h2>
 
+    <?php include 'includes/ticker.php'; ?>
+
     <!-- Filter -->
     <div class="filter-box" style="background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         <form method="GET">
@@ -122,7 +124,21 @@ if ($exchange === 'metals') {
         <?php endif; ?>
 
         <?php foreach ($listings as $l): ?>
+            <?php
+            // Bilder laden
+            $img_stmt = $pdo->prepare("SELECT * FROM em_images WHERE listing_id = :id ORDER BY sort_order LIMIT 1");
+            $img_stmt->execute([':id' => $l['listing_id']]);
+            $listing_image = $img_stmt->fetch();
+            ?>
             <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                <?php if ($listing_image): ?>
+                <div style="margin-bottom: 15px;">
+                    <img src="<?= htmlspecialchars($listing_image['filepath']) ?>"
+                         class="img-fluid rounded"
+                         alt="<?= htmlspecialchars($l['title_de']) ?>"
+                         style="width: 100%; height: 250px; object-fit: cover;">
+                </div>
+                <?php endif; ?>
                 <h3>
                     <?php
                         $metal_icons = ['XAU' => '🥇', 'XAG' => '🥈', 'XPT' => '⚪', 'XPD' => '🔘'];
@@ -174,9 +190,26 @@ if ($exchange === 'metals') {
                     | ⏳ <?= $l['tage_alt'] ?> <?= ($current_lang === 'en') ? 'days ago' : 'Tage' ?>
                 </div>
 
-                <a href="em_kontakt.php?id=<?= $l['listing_id'] ?>" class="btn" style="display:inline-block; margin-top:10px; background:#f39c12; color:white; padding:5px 10px; text-decoration:none; border-radius:3px;">
-                    <?= ($current_lang === 'en') ? 'Contact Seller' : 'Verkäufer kontaktieren' ?>
-                </a>
+                <?php
+                // Prüfe ob eingeloggt und ob eigenes Angebot
+                $current_user = getCurrentUser();
+                $is_own_listing = $current_user && ($l['user_id'] == $current_user['user_id']);
+
+                if ($is_own_listing):
+                ?>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <a href="em_angebot_bearbeiten.php?id=<?= $l['listing_id'] ?>" class="btn btn-primary" style="text-decoration: none;">
+                            <i class="bi bi-pencil"></i> <?= ($current_lang === 'en') ? 'Edit' : 'Bearbeiten' ?>
+                        </a>
+                        <a href="em_meine_angebote.php" class="btn btn-secondary" style="text-decoration: none;">
+                            <i class="bi bi-list"></i> <?= ($current_lang === 'en') ? 'My Offers' : 'Meine Angebote' ?>
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <a href="em_kontakt.php?id=<?= $l['listing_id'] ?>" class="btn" style="display:inline-block; margin-top:10px; background:#f39c12; color:white; padding:5px 10px; text-decoration:none; border-radius:3px;">
+                        <?= ($current_lang === 'en') ? 'Contact Seller' : 'Verkäufer kontaktieren' ?>
+                    </a>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
     </div>

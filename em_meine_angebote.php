@@ -2,12 +2,20 @@
 /**
  * em_meine_angebote.php - Meine Edelmetall-Angebote (Liste, Bearbeiten, Löschen)
  */
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once 'includes/config.php';
 require_once 'includes/auth.php';
+require_once 'includes/lang.php';
 
 requireLogin();
 
 $user = getCurrentUser();
+if (!$user) {
+    die('Benutzer nicht gefunden');
+}
+
 $pageTitle = t('my_metal_offers') ?? 'Meine Edelmetall-Angebote';
 
 // Löschen-Funktion
@@ -31,24 +39,32 @@ if (isset($_GET['delete']) && isset($_GET['confirm'])) {
 }
 
 // Stammdaten laden
-$metals = $pdo->query("SELECT * FROM em_metals WHERE aktiv = 1 ORDER BY sort_order")->fetchAll();
-$units = $pdo->query("SELECT * FROM em_units WHERE aktiv = 1 ORDER BY sort_order")->fetchAll();
+try {
+    $metals = $pdo->query("SELECT * FROM em_metals WHERE aktiv = 1 ORDER BY sort_order")->fetchAll();
+    $units = $pdo->query("SELECT * FROM em_units WHERE aktiv = 1 ORDER BY sort_order")->fetchAll();
+} catch (Exception $e) {
+    die("Fehler beim Laden der Stammdaten: " . $e->getMessage());
+}
 
 // User-Angebote laden
-$stmt = $pdo->prepare("
-    SELECT l.*,
-           m.symbol as metal_symbol, m.name_de as metal_name,
-           u.code as unit_code, u.name_de as unit_name,
-           DATEDIFF(NOW(), l.erstellt_am) as tage_alt,
-           (SELECT COUNT(*) FROM em_images WHERE listing_id = l.listing_id) as image_count
-    FROM em_listings l
-    JOIN em_metals m ON l.metal_id = m.metal_id
-    JOIN em_units u ON l.unit_id = u.unit_id
-    WHERE l.user_id = :user_id
-    ORDER BY l.erstellt_am DESC
-");
-$stmt->execute([':user_id' => $user['user_id']]);
-$listings = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("
+        SELECT l.*,
+               m.symbol as metal_symbol, m.name_de as metal_name,
+               u.code as unit_code, u.name_de as unit_name,
+               DATEDIFF(NOW(), l.erstellt_am) as tage_alt,
+               (SELECT COUNT(*) FROM em_images WHERE listing_id = l.listing_id) as image_count
+        FROM em_listings l
+        JOIN em_metals m ON l.metal_id = m.metal_id
+        JOIN em_units u ON l.unit_id = u.unit_id
+        WHERE l.user_id = :user_id
+        ORDER BY l.erstellt_am DESC
+    ");
+    $stmt->execute([':user_id' => $user['user_id']]);
+    $listings = $stmt->fetchAll();
+} catch (Exception $e) {
+    die("Fehler beim Laden der Angebote: " . $e->getMessage());
+}
 
 include 'includes/header.php';
 ?>
@@ -96,10 +112,24 @@ include 'includes/header.php';
     </div>
 <?php else: ?>
     <?php foreach ($listings as $l): ?>
+    <?php
+    // Bilder laden
+    $images_stmt = $pdo->prepare("SELECT * FROM em_images WHERE listing_id = :id ORDER BY sort_order LIMIT 1");
+    $images_stmt->execute([':id' => $l['listing_id']]);
+    $main_image = $images_stmt->fetch();
+    ?>
     <div class="card mb-3">
         <div class="card-body">
             <div class="row">
-                <div class="col-md-8">
+                <?php if ($main_image): ?>
+                <div class="col-md-3 mb-3">
+                    <img src="<?= htmlspecialchars($main_image['filepath']) ?>"
+                         class="img-fluid rounded"
+                         alt="<?= htmlspecialchars($l['title_de']) ?>"
+                         style="object-fit: cover; width: 100%; height: 200px;">
+                </div>
+                <?php endif; ?>
+                <div class="col-md-<?= $main_image ? '5' : '8' ?>">
                     <h4 class="card-title">
                         <?php
                             $metal_icons = ['XAU' => '🥇', 'XAG' => '🥈', 'XPT' => '⚪', 'XPD' => '🔘'];
