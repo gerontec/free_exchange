@@ -130,13 +130,27 @@ if ($exchange === 'metals') {
             $img_stmt->execute([':id' => $l['listing_id']]);
             $listing_image = $img_stmt->fetch();
             ?>
-            <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+            <div class="card" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <?php if ($listing_image): ?>
-                <div style="margin-bottom: 15px;">
+                <div style="margin-bottom: 15px; position: relative; overflow: hidden; border-radius: 5px;">
                     <img src="<?= htmlspecialchars($listing_image['filepath']) ?>"
-                         class="img-fluid rounded"
+                         class="img-fluid"
                          alt="<?= htmlspecialchars($l['title_de']) ?>"
-                         style="width: 100%; height: 250px; object-fit: cover;">
+                         style="width: 100%; height: 250px; object-fit: cover; transition: transform 0.3s ease;"
+                         onmouseover="this.style.transform='scale(1.05)'"
+                         onmouseout="this.style.transform='scale(1)'">
+                    <?php if ($l['image_count'] > 1): ?>
+                    <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 3px; font-size: 0.85em;">
+                        <i class="bi bi-camera"></i> <?= $l['image_count'] ?> <?= ($current_lang === 'en') ? 'photos' : 'Fotos' ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php else: ?>
+                <div style="margin-bottom: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 250px; display: flex; align-items: center; justify-content: center; border-radius: 5px;">
+                    <div style="text-align: center; color: white;">
+                        <i class="bi bi-gem" style="font-size: 3em;"></i>
+                        <p style="margin-top: 10px; font-size: 1.1em;"><?= ($current_lang === 'en') ? 'No image' : 'Kein Bild' ?></p>
+                    </div>
                 </div>
                 <?php endif; ?>
                 <h3>
