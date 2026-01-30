@@ -1,29 +1,47 @@
 <?php
-require_once 'includes/config.php';
-require_once 'includes/auth.php';
-require_once 'includes/image_upload.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-requireLogin();
+try {
+    require_once 'includes/config.php';
+    require_once 'includes/auth.php';
+    require_once 'includes/image_upload.php';
 
-$user = getCurrentUser();
-$pageTitle = t('create_offer_title');
+    requireLogin();
+
+    $user = getCurrentUser();
+    $pageTitle = t('create_offer_title') ?? 'Angebot erstellen';
+
+    // LAENDER-Array fallback
+    if (!isset($LAENDER)) {
+        $LAENDER = [
+            'DE' => 'Deutschland',
+            'AT' => 'Österreich',
+            'CH' => 'Schweiz'
+        ];
+    }
+} catch (Exception $e) {
+    die("Initialization Error: " . $e->getMessage() . "<br>File: " . $e->getFile() . "<br>Line: " . $e->getLine());
+}
 
 $success = false;
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        $pdo->beginTransaction();
+
         // Adresse erstellen
         $stmt = $pdo->prepare("
-            INSERT INTO lg_adressen (strasse, hausnummer, plz, ort, land) 
+            INSERT INTO lg_adressen (strasse, hausnummer, plz, ort, land)
             VALUES (:strasse, :hausnummer, :plz, :ort, :land)
         ");
         $stmt->execute([
-            ':strasse' => $_POST['strasse'],
-            ':hausnummer' => $_POST['hausnummer'],
-            ':plz' => $_POST['plz'],
-            ':ort' => $_POST['ort'],
-            ':land' => $_POST['land'] ?: 'DE'
+            ':strasse' => $_POST['strasse'] ?? '',
+            ':hausnummer' => $_POST['hausnummer'] ?? '',
+            ':plz' => $_POST['plz'] ?? '',
+            ':ort' => $_POST['ort'] ?? '',
+            ':land' => $_POST['land'] ?? 'DE'
         ]);
         $adresse_id = $pdo->lastInsertId();
         
@@ -42,16 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             ':anbieter_id' => $user['user_id'],
             ':adresse_id' => $adresse_id,
-            ':anzahl_raeume' => $_POST['anzahl_raeume'],
-            ':qm_gesamt' => $_POST['qm_gesamt'],
-            ':preis_pro_qm' => $_POST['preis_pro_qm'],
+            ':anzahl_raeume' => (int)($_POST['anzahl_raeume'] ?? 1),
+            ':qm_gesamt' => (float)($_POST['qm_gesamt'] ?? 0),
+            ':preis_pro_qm' => (float)($_POST['preis_pro_qm'] ?? 0),
             ':beheizt' => isset($_POST['beheizt']) ? 1 : 0,
             ':klimatisiert' => isset($_POST['klimatisiert']) ? 1 : 0,
             ':zugang_24_7' => isset($_POST['zugang_24_7']) ? 1 : 0,
             ':alarm_vorhanden' => isset($_POST['alarm_vorhanden']) ? 1 : 0,
             ':rolltor' => isset($_POST['rolltor']) ? 1 : 0,
-            ':verfuegbar_ab' => $_POST['verfuegbar_ab'] ?: null,
-            ':bemerkung' => $_POST['bemerkung']
+            ':verfuegbar_ab' => !empty($_POST['verfuegbar_ab']) ? $_POST['verfuegbar_ab'] : null,
+            ':bemerkung' => $_POST['bemerkung'] ?? ''
         ]);
         $lagerraum_id = $pdo->lastInsertId();
         
@@ -79,10 +97,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = "Angebot erstellt, aber Fehler beim Bild-Upload: " . $e->getMessage();
             }
         }
-        
+
+        $pdo->commit();
         $success = true;
+
     } catch (Exception $e) {
-        $error = "Fehler: " . $e->getMessage();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $error = "Fehler: " . $e->getMessage() . " (Line: " . $e->getLine() . ", File: " . basename($e->getFile()) . ")";
+        error_log("Storage creation error: " . $e->getMessage());
     }
 }
 
