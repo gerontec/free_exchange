@@ -7,6 +7,7 @@ ini_set('display_errors', 1);
 
 require_once 'includes/config.php';
 require_once 'includes/auth.php';
+require_once 'includes/image_upload.php';
 require_once 'includes/lang.php';
 
 requireLogin();
@@ -39,10 +40,38 @@ $metals = $pdo->query("SELECT * FROM em_metals WHERE aktiv = 1 ORDER BY sort_ord
 $units = $pdo->query("SELECT * FROM em_units WHERE aktiv = 1 ORDER BY sort_order")->fetchAll();
 $markets = $pdo->query("SELECT * FROM em_markets WHERE aktiv = 1 ORDER BY code")->fetchAll();
 
+// Bilder für dieses Listing laden
+$stmt = $pdo->prepare("SELECT * FROM em_images WHERE listing_id = :id ORDER BY sort_order");
+$stmt->execute([':id' => $listing_id]);
+$images = $stmt->fetchAll();
+
 $success = false;
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Bild löschen
+if (isset($_POST['delete_image'])) {
+    $image_id = (int)$_POST['delete_image'];
+
+    // Bild aus DB holen
+    $stmt = $pdo->prepare("SELECT * FROM em_images WHERE image_id = :id AND listing_id = :listing_id");
+    $stmt->execute([':id' => $image_id, ':listing_id' => $listing_id]);
+    $image = $stmt->fetch();
+
+    if ($image) {
+        // Datei löschen
+        $imageUpload = new ImageUpload('metals');
+        $imageUpload->delete($image['filename']);
+
+        // Aus DB löschen
+        $stmt = $pdo->prepare("DELETE FROM em_images WHERE image_id = :id");
+        $stmt->execute([':id' => $image_id]);
+
+        header('Location: em_angebot_bearbeiten.php?id=' . $listing_id);
+        exit;
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['delete_image'])) {
     try {
         $pdo->beginTransaction();
 
@@ -137,10 +166,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':user_id' => $user['user_id']
         ]);
 
+        // Neue Bilder hochladen
+        if (isset($_FILES['images']) && $_FILES['images']['error'][0] !== UPLOAD_ERR_NO_FILE) {
+            try {
+                $imageUpload = new ImageUpload('metals');
+                $uploaded_images = $imageUpload->uploadMultiple($_FILES['images'], 'em_' . $listing_id);
+
+                // Höchste Sort-Order ermitteln
+                $stmt = $pdo->prepare("SELECT MAX(sort_order) as max_order FROM em_images WHERE listing_id = :id");
+                $stmt->execute([':id' => $listing_id]);
+                $max_order = $stmt->fetch()['max_order'] ?? -1;
+
+                foreach ($uploaded_images as $index => $img) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO em_images (listing_id, filename, filepath, image_type, sort_order)
+                        VALUES (:listing_id, :filename, :filepath, :image_type, :sort_order)
+                    ");
+                    $stmt->execute([
+                        ':listing_id' => $listing_id,
+                        ':filename' => $img['filename'],
+                        ':filepath' => $img['filepath'],
+                        ':image_type' => 'detail',
+                        ':sort_order' => $max_order + $index + 1
+                    ]);
+                }
+            } catch (Exception $e) {
+                // Fehler beim Upload, aber Angebot wurde aktualisiert
+                $error = "Angebot aktualisiert, aber Fehler beim Bild-Upload: " . $e->getMessage();
+            }
+        }
+
         $pdo->commit();
         $success = true;
 
-        // Listing neu laden
+        // Listing und Bilder neu laden
         $stmt = $pdo->prepare("
             SELECT l.*, a.strasse, a.hausnummer, a.plz, a.ort, a.land
             FROM em_listings l
@@ -149,6 +208,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([':id' => $listing_id]);
         $listing = $stmt->fetch();
+
+        $stmt = $pdo->prepare("SELECT * FROM em_images WHERE listing_id = :id ORDER BY sort_order");
+        $stmt->execute([':id' => $listing_id]);
+        $images = $stmt->fetchAll();
 
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -175,7 +238,7 @@ include 'includes/header.php';
 
 <div class="card">
     <div class="card-body">
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <!-- Metall & Typ -->
             <h4 class="mb-3"><i class="bi bi-gem"></i> <?= t('metal_details') ?? 'Metall-Details' ?></h4>
             <div class="row g-3 mb-4">
@@ -359,6 +422,52 @@ include 'includes/header.php';
                         </label>
                     </div>
                 </div>
+            </div>
+
+            <!-- Bilder verwalten -->
+            <h4 class="mb-3 mt-4"><i class="bi bi-camera"></i> <?= t('photos') ?? 'Fotos' ?></h4>
+
+            <!-- Vorhandene Bilder -->
+            <?php if (!empty($images)): ?>
+            <div class="row g-3 mb-3">
+                <?php foreach ($images as $img): ?>
+                <div class="col-md-3">
+                    <div class="card" style="position: relative;">
+                        <img src="<?= htmlspecialchars($img['filepath']) ?>"
+                             class="card-img-top"
+                             alt="<?= htmlspecialchars($listing['title_de']) ?>"
+                             style="height: 200px; object-fit: cover;">
+                        <div class="card-body p-2">
+                            <form method="POST" style="margin: 0;">
+                                <input type="hidden" name="delete_image" value="<?= $img['image_id'] ?>">
+                                <button type="submit" class="btn btn-danger btn-sm w-100"
+                                        onclick="return confirm('<?= t('confirm_delete_image') ?? 'Bild wirklich löschen?' ?>')">
+                                    <i class="bi bi-trash"></i> <?= t('btn_delete') ?? 'Löschen' ?>
+                                </button>
+                            </form>
+                        </div>
+                        <?php if ($img['image_type'] === 'main'): ?>
+                        <div class="badge bg-primary" style="position: absolute; top: 5px; right: 5px;">
+                            <?= t('main_image') ?? 'Hauptbild' ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> <?= t('no_images_yet') ?? 'Noch keine Bilder vorhanden.' ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- Neue Bilder hochladen -->
+            <div class="mb-4">
+                <label class="form-label"><?= t('upload_new_photos') ?? 'Neue Fotos hochladen' ?> (max. 5 Bilder, je max. 5MB)</label>
+                <input type="file" name="images[]" class="form-control" accept="image/*" multiple>
+                <small class="text-muted">
+                    <?= t('photo_hint') ?? 'Erlaubt: JPG, PNG, GIF, WEBP. Die Bilder werden zusätzlich zu den vorhandenen Bildern hinzugefügt.' ?>
+                </small>
             </div>
 
             <!-- Status -->
