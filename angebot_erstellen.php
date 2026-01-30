@@ -56,23 +56,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lagerraum_id = $pdo->lastInsertId();
         
         // Bilder hochladen
-        if (!empty($_FILES['images']['name'][0])) {
-            $uploader = new ImageUpload('storage');
-            $uploaded_images = $uploader->uploadMultiple($_FILES['images'], 'storage_' . $lagerraum_id);
-            
-            foreach ($uploaded_images as $index => $img) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO lg_bilder (lagerraum_id, filename, filepath, filesize, is_main, sort_order)
-                    VALUES (:lagerraum_id, :filename, :filepath, :filesize, :is_main, :sort_order)
-                ");
-                $stmt->execute([
-                    ':lagerraum_id' => $lagerraum_id,
-                    ':filename' => $img['filename'],
-                    ':filepath' => $img['filepath'],
-                    ':filesize' => $img['filesize'],
-                    ':is_main' => $index === 0 ? 1 : 0,
-                    ':sort_order' => $index
-                ]);
+        if (isset($_FILES['images']) && $_FILES['images']['error'][0] !== UPLOAD_ERR_NO_FILE) {
+            try {
+                $imageUpload = new ImageUpload('storage');
+                $uploaded_images = $imageUpload->uploadMultiple($_FILES['images'], 'lg_' . $lagerraum_id);
+
+                foreach ($uploaded_images as $index => $img) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO lg_images (lagerraum_id, filename, filepath, image_type, sort_order)
+                        VALUES (:lagerraum_id, :filename, :filepath, :image_type, :sort_order)
+                    ");
+                    $stmt->execute([
+                        ':lagerraum_id' => $lagerraum_id,
+                        ':filename' => $img['filename'],
+                        ':filepath' => $img['filepath'],
+                        ':image_type' => $index === 0 ? 'main' : 'detail',
+                        ':sort_order' => $index
+                    ]);
+                }
+            } catch (Exception $e) {
+                // Fehler beim Upload, aber Angebot wurde erstellt
+                $error = "Angebot erstellt, aber Fehler beim Bild-Upload: " . $e->getMessage();
             }
         }
         
