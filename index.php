@@ -347,6 +347,7 @@ include 'includes/header.php';
         <!-- ============================================================= -->
         <h2>
             <i class="bi bi-gem"></i> <?= ($current_lang === 'en') ? 'Precious Metals Offers' : 'Edelmetall-Angebote' ?>
+            <?php include "includes/ticker.php"; ?>
             <span class="badge bg-warning text-dark"><?= count($angebote) ?></span>
         </h2>
 
