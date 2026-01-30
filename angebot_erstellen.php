@@ -5,6 +5,7 @@ ini_set('display_errors', 1);
 try {
     require_once 'includes/config.php';
     require_once 'includes/auth.php';
+    require_once 'includes/lang.php';
     require_once 'includes/image_upload.php';
 
     requireLogin();
