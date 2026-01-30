@@ -78,6 +78,87 @@ if ($exchange === 'metals') {
 <div class="container">
     <h2><?= ($current_lang === 'en') ? 'Precious Metals Exchange' : 'Edelmetall-Börse' ?></h2>
 
+    <!-- Price Ticker from London & Shanghai -->
+    <?php
+    // Fetch current prices from LBMA (London) and SGE (Shanghai)
+    $ticker_sql = "SELECT
+                    cp.price, cp.currency_code, cp.bid, cp.ask,
+                    cp.change_24h, cp.change_percent_24h,
+                    cp.high_24h, cp.low_24h, cp.updated_at,
+                    m.symbol, m.name_de, m.name_en,
+                    mk.code as market_code, mk.name as market_name, mk.city,
+                    u.code as unit_code
+                FROM em_current_prices cp
+                JOIN em_metals m ON cp.metal_id = m.metal_id
+                JOIN em_markets mk ON cp.market_id = mk.market_id
+                JOIN em_units u ON cp.unit_id = u.unit_id
+                WHERE mk.code IN ('LBMA', 'SGE')
+                    AND cp.price_type = 'realtime'
+                    AND m.aktiv = 1
+                ORDER BY mk.code, m.sort_order";
+    $ticker_prices = $pdo->query($ticker_sql)->fetchAll();
+
+    if (!empty($ticker_prices)):
+    ?>
+    <div class="ticker-container" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h4 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1em;">
+            <i class="bi bi-graph-up"></i> <?= ($current_lang === 'en') ? 'Live Prices - London & Shanghai' : 'Live-Preise - London & Shanghai' ?>
+        </h4>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+            <?php
+            $metal_icons = ['XAU' => '🥇', 'XAG' => '🥈', 'XPT' => '⚪', 'XPD' => '🔘'];
+            foreach ($ticker_prices as $tp):
+                $change_color = ($tp['change_percent_24h'] ?? 0) >= 0 ? '#4ade80' : '#f87171';
+                $change_icon = ($tp['change_percent_24h'] ?? 0) >= 0 ? '▲' : '▼';
+                $metal_name = ($current_lang === 'en') ? $tp['name_en'] : $tp['name_de'];
+            ?>
+            <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; backdrop-filter: blur(10px);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-size: 1.1em; font-weight: bold;">
+                        <?= $metal_icons[$tp['symbol']] ?? '💰' ?> <?= htmlspecialchars($metal_name) ?>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 12px; font-size: 0.8em;">
+                        <?= htmlspecialchars($tp['city']) ?>
+                    </div>
+                </div>
+
+                <div style="font-size: 1.8em; font-weight: bold; margin-bottom: 5px;">
+                    <?= number_format($tp['price'], 2, ',', '.') ?> <?= htmlspecialchars($tp['currency_code']) ?>
+                    <span style="font-size: 0.5em; opacity: 0.8;">/<?= htmlspecialchars($tp['unit_code']) ?></span>
+                </div>
+
+                <?php if ($tp['change_percent_24h'] !== null): ?>
+                <div style="display: flex; gap: 10px; font-size: 0.9em; margin-bottom: 8px;">
+                    <span style="color: <?= $change_color ?>; font-weight: bold;">
+                        <?= $change_icon ?> <?= number_format(abs($tp['change_percent_24h']), 2) ?>%
+                    </span>
+                    <span style="opacity: 0.9;">
+                        (<?= ($tp['change_24h'] >= 0 ? '+' : '') ?><?= number_format($tp['change_24h'], 2) ?> <?= htmlspecialchars($tp['currency_code']) ?>)
+                    </span>
+                </div>
+                <?php endif; ?>
+
+                <?php if ($tp['bid'] && $tp['ask']): ?>
+                <div style="font-size: 0.8em; opacity: 0.9; display: flex; gap: 15px;">
+                    <span><?= ($current_lang === 'en') ? 'Bid' : 'Geld' ?>: <?= number_format($tp['bid'], 2) ?></span>
+                    <span><?= ($current_lang === 'en') ? 'Ask' : 'Brief' ?>: <?= number_format($tp['ask'], 2) ?></span>
+                </div>
+                <?php endif; ?>
+
+                <div style="font-size: 0.7em; opacity: 0.7; margin-top: 8px;">
+                    <?= ($current_lang === 'en') ? 'Updated' : 'Aktualisiert' ?>: <?= date('H:i', strtotime($tp['updated_at'])) ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <div style="margin-top: 15px; font-size: 0.85em; opacity: 0.8; text-align: center;">
+            <i class="bi bi-info-circle"></i> <?= ($current_lang === 'en') ? 'Prices are for reference only. Actual trading prices may vary.' : 'Preise dienen nur zur Orientierung. Tatsächliche Handelspreise können abweichen.' ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Filter -->
     <div class="filter-box" style="background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         <form method="GET">
