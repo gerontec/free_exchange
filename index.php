@@ -269,7 +269,7 @@ document.getElementById('imageLightbox').addEventListener('click', function(even
 // 2. Filter-Parameter (Sanitized)
 $plz = $_GET['plz'] ?? '';
 $ort = $_GET['ort'] ?? '';
-$land = $_GET['land'] ?? 'DE';
+$land = $_GET['land'] ?? ''; // Kein Default - zeige alle Länder
 $qm_min = !empty($_GET['qm_min']) ? (float)$_GET['qm_min'] : null;
 $qm_max = !empty($_GET['qm_max']) ? (float)$_GET['qm_max'] : null;
 $preis_max = !empty($_GET['preis_max']) ? (float)$_GET['preis_max'] : null;
@@ -329,6 +329,7 @@ include 'includes/header.php';
                 <input type="text" name="plz" placeholder="PLZ" value="<?= htmlspecialchars($plz) ?>">
                 <input type="text" name="ort" placeholder="Ort" value="<?= htmlspecialchars($ort) ?>">
                 <select name="land">
+                    <option value="" <?= $land === '' ? 'selected' : '' ?>><?= ($current_lang === 'en') ? 'All Countries' : 'Alle Länder' ?></option>
                     <option value="DE" <?= $land == 'DE' ? 'selected' : '' ?>>Deutschland</option>
                     <option value="AT" <?= $land == 'AT' ? 'selected' : '' ?>>Österreich</option>
                     <option value="CH" <?= $land == 'CH' ? 'selected' : '' ?>>Schweiz</option>
