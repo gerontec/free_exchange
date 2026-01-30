@@ -12,7 +12,7 @@ DB_CONFIG = {
 }
 
 OUTPUT_FILE = './create_tables.sql'
-PREFIXES = ('lg_', 'gun_')
+PREFIXES = ('lg_', 'gun_', 'em_')
 
 def export_ddl():
     try:
