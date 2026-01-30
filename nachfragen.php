@@ -1,36 +1,55 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once 'includes/config.php';
 $pageTitle = 'Lagerraum-Nachfragen';
 
-// Filter-Parameter
-$plz = $_GET['plz'] ?? '';
-$ort = $_GET['ort'] ?? '';
+$error = '';
+$nachfragen = [];
 
-// SQL Query bauen
-$sql = "SELECT * FROM lg_v_nachfragen WHERE 1=1";
-$params = [];
+try {
+    // Filter-Parameter
+    $plz = $_GET['plz'] ?? '';
+    $ort = $_GET['ort'] ?? '';
 
-if ($plz) {
-    $sql .= " AND (plz_von LIKE :plz OR ort_wunsch LIKE :ort)";
-    $params[':plz'] = $plz . '%';
-    $params[':ort'] = '%' . $plz . '%';
+    // SQL Query bauen - verwende Tabelle direkt statt View
+    $sql = "SELECT n.*, u.name as suchender_name, u.email, u.telefon
+            FROM lg_nachfragen n
+            LEFT JOIN users u ON n.suchender_id = u.user_id
+            WHERE 1=1";
+    $params = [];
+
+    if ($plz) {
+        $sql .= " AND (n.plz_von LIKE :plz OR n.ort_wunsch LIKE :ort)";
+        $params[':plz'] = $plz . '%';
+        $params[':ort'] = '%' . $plz . '%';
+    }
+
+    if ($ort) {
+        $sql .= " AND n.ort_wunsch LIKE :ort2";
+        $params[':ort2'] = '%' . $ort . '%';
+    }
+
+    $sql .= " ORDER BY n.erstellt_am DESC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $nachfragen = $stmt->fetchAll();
+
+} catch (Exception $e) {
+    $error = "Fehler beim Laden der Nachfragen: " . $e->getMessage();
+    error_log("nachfragen.php error: " . $e->getMessage());
 }
-
-if ($ort) {
-    $sql .= " AND ort_wunsch LIKE :ort2";
-    $params[':ort2'] = '%' . $ort . '%';
-}
-
-$sql .= " ORDER BY erstellt_am DESC";
-
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$nachfragen = $stmt->fetchAll();
 
 include 'includes/header.php';
 ?>
 
 <h2>Lagerraum-Nachfragen</h2>
+
+<?php if ($error): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+<?php endif; ?>
 
 <!-- Filter -->
 <div class="filter-box">
