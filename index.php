@@ -365,14 +365,12 @@ include 'includes/header.php';
                 </h3>
                 
                 <p><strong>📍 <?= htmlspecialchars($a['plz'] . ' ' . $a['ort']) ?></strong> (<?= htmlspecialchars($a['land']) ?>)</p>
-                
-                <div class="description" style="font-style: italic; color: #555;">
-                    <?php 
-                        // Sprach-Logik: Falls englisch gewünscht aber leer, Fallback auf Deutsch
-                        $desc = (!empty($a['bemerkung' . $suffix])) ? $a['bemerkung' . $suffix] : $a['bemerkung_de'];
-                        echo nl2br(htmlspecialchars($desc));
-                    ?>
+
+                <?php if (!empty($a['strasse'])): ?>
+                <div class="description" style="font-style: italic; color: #555; margin-bottom: 10px;">
+                    <?= htmlspecialchars($a['strasse'] . ' ' . ($a['hausnummer'] ?? '')) ?>
                 </div>
+                <?php endif; ?>
 
                 <div class="details" style="margin-top: 10px;">
                     <span class="badge"><?= $a['beheizt'] ? '🔥 Beheizt' : '❄️ Unbeheizt' ?></span>
@@ -380,8 +378,8 @@ include 'includes/header.php';
                 </div>
 
                 <div class="price" style="font-weight: bold; font-size: 1.2em; margin-top: 10px; color: #2c3e50;">
-                    <?= number_format($a['preis_pro_qm'], 2, ',', '.') ?> €/m² 
-                    <small>(Total: <?= number_format($a['preis_gesamt'], 2, ',', '.') ?> €)</small>
+                    <?= number_format($a['preis_pro_qm'], 2, ',', '.') ?> €/m²
+                    <small>(Total: <?= number_format($a['preis_pro_qm'] * $a['qm_gesamt'], 2, ',', '.') ?> €)</small>
                 </div>
 
                 <div class="footer" style="margin-top: 15px; font-size: 0.85em; border-top: 1px solid #eee; padding-top: 10px;">
