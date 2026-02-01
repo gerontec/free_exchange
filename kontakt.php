@@ -10,8 +10,13 @@ if (!$lagerraum_id) {
     exit;
 }
 
-// Lagerraum-Details laden
-$stmt = $pdo->prepare("SELECT * FROM lg_v_angebote WHERE lagerraum_id = :id");
+// Lagerraum-Details laden (inkl. Anbieter-E-Mail)
+$stmt = $pdo->prepare("
+    SELECT lr.*, u.email as anbieter_email, u.name as anbieter_name
+    FROM lg_v_angebote lr
+    JOIN lg_users u ON lr.anbieter_id = u.user_id
+    WHERE lr.lagerraum_id = :id
+");
 $stmt->execute([':id' => $lagerraum_id]);
 $lagerraum = $stmt->fetch();
 
@@ -48,7 +53,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':interessent_id' => $interessent_id,
             ':nachricht' => $_POST['nachricht']
         ]);
-        
+
+        // E-Mail-Benachrichtigung an Anbieter senden
+        if (!empty($lagerraum['anbieter_email'])) {
+            $anbieterName = htmlspecialchars($lagerraum['anbieter_name'] ?? 'Anbieter');
+            $interessentName = htmlspecialchars($_POST['name']);
+            $interessentEmail = htmlspecialchars($_POST['email']);
+            $interessentTelefon = htmlspecialchars($_POST['telefon'] ?? '-');
+            $nachricht = nl2br(htmlspecialchars($_POST['nachricht']));
+
+            $lagerraumAdresse = htmlspecialchars($lagerraum['strasse'] . ' ' . $lagerraum['hausnummer'] . ', ' .
+                                                 $lagerraum['plz'] . ' ' . $lagerraum['ort']);
+            $lagerraumQm = number_format($lagerraum['qm_gesamt'], 2, ',', '.');
+            $lagerraumPreis = number_format($lagerraum['preis_gesamt'], 2, ',', '.');
+
+            $emailContent = "
+                <h2>Neue Kontaktanfrage für Ihren Lagerraum</h2>
+
+                <h3>Lagerraum-Details:</h3>
+                <p>
+                    <strong>Adresse:</strong> {$lagerraumAdresse}<br>
+                    <strong>Fläche:</strong> {$lagerraumQm} m²<br>
+                    <strong>Preis:</strong> {$lagerraumPreis} €/Monat
+                </p>
+
+                <h3>Kontaktdaten des Interessenten:</h3>
+                <p>
+                    <strong>Name:</strong> {$interessentName}<br>
+                    <strong>E-Mail:</strong> <a href='mailto:{$interessentEmail}'>{$interessentEmail}</a><br>
+                    <strong>Telefon:</strong> {$interessentTelefon}
+                </p>
+
+                <h3>Nachricht:</h3>
+                <p>{$nachricht}</p>
+
+                <p style='margin-top: 30px;'>
+                    <a href='" . BASE_URL . "meine_angebote.php' class='btn'>Meine Angebote verwalten</a>
+                </p>
+            ";
+
+            $emailSubject = "Neue Kontaktanfrage für Lagerraum in " . $lagerraum['ort'];
+            sendEmail($lagerraum['anbieter_email'], $emailSubject, getEmailTemplate($emailContent), MAIL_FROM, $interessentEmail);
+        }
+
         $success = true;
     } catch (Exception $e) {
         $error = "Fehler: " . $e->getMessage();
