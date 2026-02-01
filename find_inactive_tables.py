@@ -12,7 +12,7 @@ DB_CONFIG = {
     'cursorclass': pymysql.cursors.DictCursor
 }
 
-DAYS_INACTIVE = 7
+DAYS_INACTIVE = 400
 
 def format_size(bytes_size):
     """Konvertiert Bytes in lesbare Größe (KB, MB, GB)"""
