@@ -3,6 +3,7 @@
  * em_kontakt.php - Kontakt aufnehmen für Edelmetall-Angebote
  */
 require_once 'includes/config.php';
+require_once 'includes/lang.php';
 
 // Sprache festlegen
 $current_lang = $_SESSION['lang'] ?? 'de';
