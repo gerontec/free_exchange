@@ -11,7 +11,7 @@ if (!$lagerraum_id) {
 }
 
 // Lagerraum-Details laden
-$stmt = $pdo->prepare("SELECT * FROM lg_v_angebote WHERE lagerraum_id = :id");
+$stmt = $pdo->prepare("SELECT * FROM lg_lagerraeume WHERE lagerraum_id = :id");
 $stmt->execute([':id' => $lagerraum_id]);
 $lagerraum = $stmt->fetch();
 
