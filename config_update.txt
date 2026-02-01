@@ -1,0 +1,41 @@
+ANWEISUNGEN ZUM FIXEN DES HTTP 500 FEHLERS
+=============================================
+
+Problem: Die Funktionen sendEmail() und getEmailTemplate() existieren nicht in der Produktions-config.php
+
+LÖSUNG - SCHRITT FÜR SCHRITT:
+
+1. Kopiere die neue mail.php in die Produktion:
+
+   cp /home/user/free_exchange/includes/mail.php ../../web2/includes/mail.php
+
+2. Füge in ../../web2/includes/config.php die folgenden Zeilen GANZ AM ENDE hinzu:
+
+// BASE_URL für E-Mail-Links
+define('BASE_URL', 'https://heissa.de/web2/');
+
+// E-Mail-Funktionen laden
+require_once __DIR__ . '/mail.php';
+
+3. Füge in ../../web2/kontakt.php nach der Zeile "require_once 'includes/config.php';" ein:
+
+require_once 'includes/mail.php';
+
+4. Füge in ../../web2/em_kontakt.php nach der Zeile "require_once 'includes/config.php';" ein:
+
+require_once 'includes/mail.php';
+
+ALTERNATIV (EINFACHER):
+========================
+
+Füge nur Schritt 2 aus - die require_once in config.php lädt mail.php automatisch für alle Seiten.
+Dann sind Schritte 3 und 4 nicht nötig.
+
+TESTEN:
+=======
+
+Nach den Änderungen:
+1. Öffne https://heissa.de/web2/kontakt.php?id=1
+2. Sollte keine 500 Fehler mehr geben
+3. Sende ein Test-Kontaktformular ab
+4. Prüfe ob E-Mail ankommt
