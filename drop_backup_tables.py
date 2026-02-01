@@ -24,7 +24,7 @@ def drop_backup_tables():
                        (DATA_LENGTH + INDEX_LENGTH) AS TOTAL_SIZE
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = %s
-                  AND TABLE_NAME LIKE '%backup%'
+                  AND TABLE_NAME LIKE '%%backup%%'
                   AND TABLE_TYPE = 'BASE TABLE'
                 ORDER BY TABLE_NAME
             """
