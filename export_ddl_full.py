@@ -26,7 +26,8 @@ def export_ddl():
 
                 if tables:
                     key_name = list(tables[0].keys())[0]
-                    target_tables = [t[key_name] for t in tables if t[key_name].startswith(PREFIXES)]
+                    #target_tables = [t[key_name] for t in tables if t[key_name].startswith(PREFIXES)]
+                    target_tables = [t[key_name] for t in tables]
 
                     f.write("-- ============================================\n")
                     f.write("-- TABELLEN UND VIEWS\n")

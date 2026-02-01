@@ -1,27 +1,94 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once 'includes/config.php';
 require_once 'includes/auth.php';
 require_once 'includes/lang.php';
 
+<<<<<<< HEAD
+$pageTitle = 'Waffenbörse - Angebote';
+$error = '';
+$listings = [];
+=======
 $pageTitle = t('gun_offers');
+>>>>>>> origin/claude/fix-language-selection-j2XA8
 
-// Filter-Parameter
-$category_id = $_GET['category'] ?? '';
-$manufacturer_id = $_GET['manufacturer'] ?? '';
-$caliber = $_GET['caliber'] ?? '';
-$price_max = $_GET['price_max'] ?? '';
-$condition = $_GET['condition'] ?? '';
-$license = $_GET['license'] ?? '';
+try {
+    // Filter-Parameter
+    $category_id = $_GET['category'] ?? '';
+    $manufacturer_id = $_GET['manufacturer'] ?? '';
+    $caliber = $_GET['caliber'] ?? '';
+    $price_max = $_GET['price_max'] ?? '';
+    $condition = $_GET['condition'] ?? '';
+    $license = $_GET['license'] ?? '';
 
-// SQL Query
-$sql = "SELECT * FROM gun_v_active_listings WHERE 1=1";
-$params = [];
+    // SQL Query - direkte Tabellen statt View
+    $sql = "SELECT l.*,
+                   c.name_de as category_name, c.license_required,
+                   m.name as manufacturer_name,
+                   a.plz, a.ort,
+                   u.name as seller_name
+            FROM gun_listings l
+            LEFT JOIN gun_categories c ON l.category_id = c.category_id
+            LEFT JOIN gun_manufacturers m ON l.manufacturer_id = m.manufacturer_id
+            LEFT JOIN lg_adressen a ON l.adresse_id = a.adresse_id
+            LEFT JOIN lg_users u ON l.seller_id = u.user_id
+            WHERE l.aktiv = 1 AND (l.expires_at IS NULL OR l.expires_at > NOW())";
+    $params = [];
 
-if ($category_id) {
-    $sql .= " AND category_id = :category_id";
-    $params[':category_id'] = $category_id;
+    if ($category_id) {
+        $sql .= " AND l.category_id = :category_id";
+        $params[':category_id'] = $category_id;
+    }
+
+    if ($manufacturer_id) {
+        $sql .= " AND l.manufacturer_id = :manufacturer_id";
+        $params[':manufacturer_id'] = $manufacturer_id;
+    }
+
+    if ($caliber) {
+        $sql .= " AND l.caliber LIKE :caliber";
+        $params[':caliber'] = '%' . $caliber . '%';
+    }
+
+    if ($price_max) {
+        $sql .= " AND l.price <= :price_max";
+        $params[':price_max'] = $price_max;
+    }
+
+    if ($condition) {
+        $sql .= " AND l.condition_rating = :condition";
+        $params[':condition'] = $condition;
+    }
+
+    if ($license) {
+        $sql .= " AND c.license_required = :license";
+        $params[':license'] = $license;
+    }
+
+    $sql .= " ORDER BY l.erstellt_am DESC LIMIT 50";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $listings = $stmt->fetchAll();
+
+    // Kategorien für Filter
+    $categories = $pdo->query("SELECT * FROM gun_categories WHERE aktiv = 1 ORDER BY sort_order")->fetchAll();
+
+    // Hersteller für Filter
+    $manufacturers = $pdo->query("SELECT * FROM gun_manufacturers WHERE aktiv = 1 ORDER BY name")->fetchAll();
+
+} catch (Exception $e) {
+    $error = "Fehler beim Laden der Angebote: " . $e->getMessage();
+    error_log("gun_index.php error: " . $e->getMessage());
+    $listings = [];
+    $categories = [];
+    $manufacturers = [];
 }
 
+<<<<<<< HEAD
+=======
 if ($manufacturer_id) {
     $sql .= " AND manufacturer_id = :manufacturer_id";
     $params[':manufacturer_id'] = $manufacturer_id;
@@ -65,8 +132,13 @@ foreach ($categories as $cat) {
 // Hersteller für Filter
 $manufacturers = $pdo->query("SELECT * FROM gun_manufacturers WHERE aktiv = 1 ORDER BY name")->fetchAll();
 
+>>>>>>> origin/claude/fix-language-selection-j2XA8
 include 'includes/header.php';
 ?>
+
+<?php if ($error): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+<?php endif; ?>
 
 <div class="row">
     <div class="col-md-3">
@@ -221,22 +293,24 @@ include 'includes/header.php';
                                     <?= $license_icons[$item['license_required']] ?? $item['license_required'] ?>
                                 </span>
                             </div>
-                            
-                            <?php if ($item['description']): ?>
+
+                            <?php if (!empty($item['includes_accessories'])): ?>
                                 <p class="card-text text-muted">
-                                    <?= nl2br(htmlspecialchars(substr($item['description'], 0, 200))) ?>
-                                    <?= strlen($item['description']) > 200 ? '...' : '' ?>
+                                    <strong>Zubehör:</strong> <?= nl2br(htmlspecialchars(substr($item['includes_accessories'], 0, 200))) ?>
+                                    <?= strlen($item['includes_accessories']) > 200 ? '...' : '' ?>
                                 </p>
                             <?php endif; ?>
-                            
+
                             <div class="small text-muted">
+<<<<<<< HEAD
+                                <i class="bi bi-geo-alt"></i> <?= htmlspecialchars(($item['plz'] ?? '') . ' ' . ($item['ort'] ?? 'Standort nicht angegeben')) ?>
+                                <?php if (!empty($item['shipping_possible'])): ?>
+                                    | <i class="bi bi-truck"></i> Versand möglich
+=======
                                 <i class="bi bi-geo-alt"></i> <?= htmlspecialchars($item['plz'] . ' ' . $item['ort']) ?>
                                 <?php if ($item['shipping_possible']): ?>
                                     | <i class="bi bi-truck"></i> <?= t('gun_shipping_possible') ?>
-                                <?php endif; ?>
-                                <?php if ($item['seller_rating']): ?>
-                                    | <i class="bi bi-star-fill text-warning"></i> 
-                                    <?= number_format($item['seller_rating'], 1) ?>
+>>>>>>> origin/claude/fix-language-selection-j2XA8
                                 <?php endif; ?>
                             </div>
                         </div>
