@@ -33,7 +33,7 @@ CREATE TABLE `em_current_prices` (
   CONSTRAINT `em_current_prices_ibfk_1` FOREIGN KEY (`metal_id`) REFERENCES `em_metals` (`metal_id`) ON DELETE CASCADE,
   CONSTRAINT `em_current_prices_ibfk_2` FOREIGN KEY (`market_id`) REFERENCES `em_markets` (`market_id`) ON DELETE CASCADE,
   CONSTRAINT `em_current_prices_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `em_units` (`unit_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1493 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=545 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Object: em_favorites
 CREATE TABLE `em_favorites` (
@@ -69,7 +69,7 @@ CREATE TABLE `em_images` (
   KEY `idx_type` (`image_type`),
   KEY `idx_sort` (`sort_order`),
   CONSTRAINT `em_images_ibfk_1` FOREIGN KEY (`listing_id`) REFERENCES `em_listings` (`listing_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Object: em_listings
 CREATE TABLE `em_listings` (
@@ -435,7 +435,7 @@ CREATE TABLE `gun_listings` (
   CONSTRAINT `gun_listings_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `gun_categories` (`category_id`),
   CONSTRAINT `gun_listings_ibfk_3` FOREIGN KEY (`manufacturer_id`) REFERENCES `gun_manufacturers` (`manufacturer_id`) ON DELETE SET NULL,
   CONSTRAINT `gun_listings_ibfk_4` FOREIGN KEY (`adresse_id`) REFERENCES `lg_adressen` (`adresse_id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Object: gun_manufacturers
 CREATE TABLE `gun_manufacturers` (
@@ -531,7 +531,7 @@ CREATE TABLE `gun_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Object: gun_v_active_listings
-CREATE ALGORITHM=UNDEFINED DEFINER=`gh`@`localhost` SQL SECURITY DEFINER VIEW `gun_v_active_listings` AS select `l`.`listing_id` AS `listing_id`,`l`.`seller_id` AS `seller_id`,`l`.`category_id` AS `category_id`,`l`.`manufacturer_id` AS `manufacturer_id`,`l`.`title` AS `title`,`l`.`model` AS `model`,`l`.`caliber` AS `caliber`,`l`.`barrel_length_cm` AS `barrel_length_cm`,`l`.`weight_kg` AS `weight_kg`,`l`.`capacity` AS `capacity`,`l`.`year_manufactured` AS `year_manufactured`,`l`.`serial_number` AS `serial_number`,`l`.`condition_rating` AS `condition_rating`,`l`.`rounds_fired` AS `rounds_fired`,`l`.`price` AS `price`,`l`.`price_negotiable` AS `price_negotiable`,`l`.`includes_case` AS `includes_case`,`l`.`includes_magazines` AS `includes_magazines`,`l`.`includes_accessories` AS `includes_accessories`,`l`.`has_wbk` AS `has_wbk`,`l`.`wbk_transferable` AS `wbk_transferable`,`l`.`proof_marks` AS `proof_marks`,`l`.`description` AS `description`,`l`.`technical_specs` AS `technical_specs`,`l`.`adresse_id` AS `adresse_id`,`l`.`shipping_possible` AS `shipping_possible`,`l`.`shipping_cost` AS `shipping_cost`,`l`.`pickup_only` AS `pickup_only`,`l`.`listing_type` AS `listing_type`,`l`.`aktiv` AS `aktiv`,`l`.`sold` AS `sold`,`l`.`sold_at` AS `sold_at`,`l`.`erstellt_am` AS `erstellt_am`,`l`.`aktualisiert_am` AS `aktualisiert_am`,`l`.`expires_at` AS `expires_at`,`c`.`name_de` AS `category_name`,`c`.`license_required` AS `license_required`,`m`.`name` AS `manufacturer_name`,`m`.`country` AS `manufacturer_country`,`u`.`name` AS `seller_name`,`u`.`email` AS `seller_email`,`a`.`plz` AS `plz`,`a`.`ort` AS `ort`,`a`.`land` AS `land`,(select count(0) from `gun_images` where `wagodb`.`gun_images`.`listing_id` = `l`.`listing_id`) AS `image_count`,(select avg(`wagodb`.`gun_ratings`.`rating`) from `gun_ratings` where `wagodb`.`gun_ratings`.`rated_user_id` = `l`.`seller_id`) AS `seller_rating` from ((((`gun_listings` `l` join `gun_categories` `c` on(`l`.`category_id` = `c`.`category_id`)) left join `gun_manufacturers` `m` on(`l`.`manufacturer_id` = `m`.`manufacturer_id`)) join `lg_users` `u` on(`l`.`seller_id` = `u`.`user_id`)) left join `lg_adressen` `a` on(`l`.`adresse_id` = `a`.`adresse_id`)) where `l`.`aktiv` = 1 and `l`.`sold` = 0 order by `l`.`erstellt_am` desc;
+CREATE ALGORITHM=UNDEFINED DEFINER=`gh`@`localhost` SQL SECURITY DEFINER VIEW `gun_v_active_listings` AS select `l`.`listing_id` AS `listing_id`,`l`.`seller_id` AS `seller_id`,`l`.`category_id` AS `category_id`,`l`.`manufacturer_id` AS `manufacturer_id`,`l`.`title` AS `title`,`l`.`title_en` AS `title_en`,`l`.`model` AS `model`,`l`.`caliber` AS `caliber`,`l`.`barrel_length_cm` AS `barrel_length_cm`,`l`.`weight_kg` AS `weight_kg`,`l`.`capacity` AS `capacity`,`l`.`year_manufactured` AS `year_manufactured`,`l`.`serial_number` AS `serial_number`,`l`.`condition_rating` AS `condition_rating`,`l`.`rounds_fired` AS `rounds_fired`,`l`.`price` AS `price`,`l`.`price_negotiable` AS `price_negotiable`,`l`.`includes_case` AS `includes_case`,`l`.`includes_magazines` AS `includes_magazines`,`l`.`includes_accessories` AS `includes_accessories`,`l`.`has_wbk` AS `has_wbk`,`l`.`wbk_transferable` AS `wbk_transferable`,`l`.`proof_marks` AS `proof_marks`,`l`.`description_de` AS `description_de`,`l`.`description_en` AS `description_en`,`l`.`technical_specs` AS `technical_specs`,`l`.`adresse_id` AS `adresse_id`,`l`.`shipping_possible` AS `shipping_possible`,`l`.`shipping_cost` AS `shipping_cost`,`l`.`pickup_only` AS `pickup_only`,`l`.`listing_type` AS `listing_type`,`l`.`aktiv` AS `aktiv`,`l`.`sold` AS `sold`,`l`.`sold_at` AS `sold_at`,`l`.`erstellt_am` AS `erstellt_am`,`l`.`aktualisiert_am` AS `aktualisiert_am`,`l`.`expires_at` AS `expires_at`,`c`.`name_de` AS `category_name`,`c`.`license_required` AS `license_required`,`m`.`name` AS `manufacturer_name`,`m`.`country` AS `manufacturer_country`,`u`.`name` AS `seller_name`,`u`.`email` AS `seller_email`,`a`.`plz` AS `plz`,`a`.`ort` AS `ort`,`a`.`land` AS `land`,(select count(0) from `gun_images` where `gun_images`.`listing_id` = `l`.`listing_id`) AS `image_count`,(select avg(`gun_ratings`.`rating`) from `gun_ratings` where `gun_ratings`.`rated_user_id` = `l`.`seller_id`) AS `seller_rating` from ((((`gun_listings` `l` join `gun_categories` `c` on(`l`.`category_id` = `c`.`category_id`)) left join `gun_manufacturers` `m` on(`l`.`manufacturer_id` = `m`.`manufacturer_id`)) join `lg_users` `u` on(`l`.`seller_id` = `u`.`user_id`)) left join `lg_adressen` `a` on(`l`.`adresse_id` = `a`.`adresse_id`)) where `l`.`aktiv` = 1 and `l`.`sold` = 0 order by `l`.`erstellt_am` desc;
 
 -- Object: gun_v_user_stats
 CREATE ALGORITHM=UNDEFINED DEFINER=`gh`@`localhost` SQL SECURITY DEFINER VIEW `gun_v_user_stats` AS select `u`.`user_id` AS `user_id`,`u`.`name` AS `name`,`u`.`email` AS `email`,count(distinct `l`.`listing_id`) AS `total_listings`,count(distinct case when `l`.`sold` = 1 then `l`.`listing_id` end) AS `sold_count`,avg(`r`.`rating`) AS `avg_rating`,count(distinct `r`.`rating_id`) AS `rating_count` from ((`lg_users` `u` left join `gun_listings` `l` on(`u`.`user_id` = `l`.`seller_id`)) left join `gun_ratings` `r` on(`u`.`user_id` = `r`.`rated_user_id`)) group by `u`.`user_id`;
@@ -551,7 +551,7 @@ CREATE TABLE `lg_adressen` (
   KEY `idx_ort` (`ort`),
   KEY `idx_geo` (`latitude`,`longitude`),
   KEY `idx_land` (`land`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Object: lg_bilder
 CREATE TABLE `lg_bilder` (
@@ -568,6 +568,23 @@ CREATE TABLE `lg_bilder` (
   KEY `idx_reihenfolge` (`reihenfolge`),
   CONSTRAINT `lg_bilder_ibfk_1` FOREIGN KEY (`lagerraum_id`) REFERENCES `lg_lagerraeume` (`lagerraum_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Object: lg_images
+CREATE TABLE `lg_images` (
+  `image_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `lagerraum_id` int(10) unsigned NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `filepath` varchar(500) NOT NULL,
+  `image_type` enum('main','detail','other') DEFAULT 'detail',
+  `sort_order` tinyint(3) unsigned DEFAULT 0,
+  `caption` varchar(255) DEFAULT NULL,
+  `erstellt_am` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`image_id`),
+  KEY `idx_lagerraum` (`lagerraum_id`),
+  KEY `idx_type` (`image_type`),
+  KEY `idx_sort` (`sort_order`),
+  CONSTRAINT `lg_images_ibfk_1` FOREIGN KEY (`lagerraum_id`) REFERENCES `lg_lagerraeume` (`lagerraum_id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Object: lg_kontaktanfragen
 CREATE TABLE `lg_kontaktanfragen` (
@@ -626,7 +643,7 @@ CREATE TABLE `lg_lagerraeume` (
   KEY `idx_created` (`erstellt_am`),
   CONSTRAINT `lg_lagerraeume_ibfk_1` FOREIGN KEY (`anbieter_id`) REFERENCES `lg_users` (`user_id`) ON DELETE CASCADE,
   CONSTRAINT `lg_lagerraeume_ibfk_2` FOREIGN KEY (`adresse_id`) REFERENCES `lg_adressen` (`adresse_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Object: lg_sessions
 CREATE TABLE `lg_sessions` (
