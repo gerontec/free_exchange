@@ -4,7 +4,7 @@ require_once 'includes/config.php';
 require_once 'includes/auth.php';
 require_once 'includes/lang.php';
 
-$pageTitle = 'Waffenbörse - Angebote';
+$pageTitle = t('gun_offers');
 
 // Filter-Parameter
 $category_id = $_GET['category'] ?? '';
@@ -57,6 +57,12 @@ $listings = $stmt->fetchAll();
 // Kategorien für Filter
 $categories = $pdo->query("SELECT * FROM gun_categories WHERE aktiv = 1 ORDER BY sort_order")->fetchAll();
 
+// Kategorien als assoziatives Array für schnellen Zugriff
+$categories_map = [];
+foreach ($categories as $cat) {
+    $categories_map[$cat['category_id']] = $cat;
+}
+
 // Hersteller für Filter
 $manufacturers = $pdo->query("SELECT * FROM gun_manufacturers WHERE aktiv = 1 ORDER BY name")->fetchAll();
 
@@ -68,26 +74,26 @@ include 'includes/header.php';
         <!-- Filter Sidebar -->
         <div class="card mb-4">
             <div class="card-header bg-danger text-white">
-                <h5 class="mb-0"><i class="bi bi-funnel"></i> Filter</h5>
+                <h5 class="mb-0"><i class="bi bi-funnel"></i> <?= t('gun_filter') ?></h5>
             </div>
             <div class="card-body">
                 <form method="GET">
                     <div class="mb-3">
-                        <label class="form-label">Kategorie</label>
+                        <label class="form-label"><?= t('gun_category') ?></label>
                         <select name="category" class="form-select form-select-sm">
-                            <option value="">Alle Kategorien</option>
+                            <option value=""><?= t('gun_all_categories') ?></option>
                             <?php foreach ($categories as $cat): ?>
                                 <option value="<?= $cat['category_id'] ?>" <?= $category_id == $cat['category_id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($cat['name_de']) ?>
+                                    <?= htmlspecialchars(__t($cat, 'name')) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Hersteller</label>
+                        <label class="form-label"><?= t('gun_manufacturer') ?></label>
                         <select name="manufacturer" class="form-select form-select-sm">
-                            <option value="">Alle Hersteller</option>
+                            <option value=""><?= t('gun_all_manufacturers') ?></option>
                             <?php foreach ($manufacturers as $man): ?>
                                 <option value="<?= $man['manufacturer_id'] ?>" <?= $manufacturer_id == $man['manufacturer_id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($man['name']) ?>
@@ -97,44 +103,44 @@ include 'includes/header.php';
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Kaliber</label>
-                        <input type="text" name="caliber" class="form-control form-control-sm" 
-                               value="<?= htmlspecialchars($caliber) ?>" placeholder="z.B. 9mm">
+                        <label class="form-label"><?= t('gun_caliber') ?></label>
+                        <input type="text" name="caliber" class="form-control form-control-sm"
+                               value="<?= htmlspecialchars($caliber) ?>" placeholder="<?= t('gun_caliber_placeholder') ?>">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><?= t('gun_max_price') ?></label>
+                        <input type="number" name="price_max" class="form-control form-control-sm"
+                               value="<?= htmlspecialchars($price_max) ?>" placeholder="<?= t('gun_price_placeholder') ?>">
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Max. Preis (€)</label>
-                        <input type="number" name="price_max" class="form-control form-control-sm" 
-                               value="<?= htmlspecialchars($price_max) ?>" placeholder="z.B. 1000">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Zustand</label>
+                        <label class="form-label"><?= t('gun_condition') ?></label>
                         <select name="condition" class="form-select form-select-sm">
-                            <option value="">Alle</option>
-                            <option value="neu" <?= $condition === 'neu' ? 'selected' : '' ?>>Neu</option>
-                            <option value="wie_neu" <?= $condition === 'wie_neu' ? 'selected' : '' ?>>Wie neu</option>
-                            <option value="sehr_gut" <?= $condition === 'sehr_gut' ? 'selected' : '' ?>>Sehr gut</option>
-                            <option value="gut" <?= $condition === 'gut' ? 'selected' : '' ?>>Gut</option>
-                            <option value="gebraucht" <?= $condition === 'gebraucht' ? 'selected' : '' ?>>Gebraucht</option>
+                            <option value=""><?= t('gun_all_conditions') ?></option>
+                            <option value="neu" <?= $condition === 'neu' ? 'selected' : '' ?>><?= t('gun_condition_neu') ?></option>
+                            <option value="wie_neu" <?= $condition === 'wie_neu' ? 'selected' : '' ?>><?= t('gun_condition_wie_neu') ?></option>
+                            <option value="sehr_gut" <?= $condition === 'sehr_gut' ? 'selected' : '' ?>><?= t('gun_condition_sehr_gut') ?></option>
+                            <option value="gut" <?= $condition === 'gut' ? 'selected' : '' ?>><?= t('gun_condition_gut') ?></option>
+                            <option value="gebraucht" <?= $condition === 'gebraucht' ? 'selected' : '' ?>><?= t('gun_condition_gebraucht') ?></option>
                         </select>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Waffenschein</label>
+                        <label class="form-label"><?= t('gun_license') ?></label>
                         <select name="license" class="form-select form-select-sm">
-                            <option value="">Alle</option>
-                            <option value="none" <?= $license === 'none' ? 'selected' : '' ?>>Frei ab 18</option>
-                            <option value="kleiner_waffenschein" <?= $license === 'kleiner_waffenschein' ? 'selected' : '' ?>>Kleiner WS</option>
-                            <option value="wbk" <?= $license === 'wbk' ? 'selected' : '' ?>>WBK</option>
+                            <option value=""><?= t('gun_all_conditions') ?></option>
+                            <option value="none" <?= $license === 'none' ? 'selected' : '' ?>><?= t('gun_license_none') ?></option>
+                            <option value="kleiner_waffenschein" <?= $license === 'kleiner_waffenschein' ? 'selected' : '' ?>><?= t('gun_license_kleiner_waffenschein') ?></option>
+                            <option value="wbk" <?= $license === 'wbk' ? 'selected' : '' ?>><?= t('gun_license_wbk') ?></option>
                         </select>
                     </div>
                     
                     <button type="submit" class="btn btn-danger btn-sm w-100 mb-2">
-                        <i class="bi bi-search"></i> Suchen
+                        <i class="bi bi-search"></i> <?= t('gun_search') ?>
                     </button>
                     <a href="gun_index.php" class="btn btn-outline-secondary btn-sm w-100">
-                        <i class="bi bi-x-circle"></i> Zurücksetzen
+                        <i class="bi bi-x-circle"></i> <?= t('gun_reset') ?>
                     </a>
                 </form>
             </div>
@@ -143,11 +149,11 @@ include 'includes/header.php';
         <!-- Info Box -->
         <div class="card bg-light">
             <div class="card-body">
-                <h6 class="card-title">⚠️ Wichtige Hinweise</h6>
+                <h6 class="card-title"><?= t('gun_notes_title') ?></h6>
                 <ul class="small mb-0">
-                    <li>Waffenhandel nur zwischen Inhabern entsprechender Genehmigungen</li>
-                    <li>Persönliche Übergabe empfohlen</li>
-                    <li>Alle Angebote gemäß WaffG</li>
+                    <li><?= t('gun_notes_1') ?></li>
+                    <li><?= t('gun_notes_2') ?></li>
+                    <li><?= t('gun_notes_3') ?></li>
                 </ul>
             </div>
         </div>
@@ -155,13 +161,13 @@ include 'includes/header.php';
     
     <div class="col-md-9">
         <h2 class="mb-4">
-            <i class="bi bi-crosshair"></i> Waffen-Angebote
+            <i class="bi bi-crosshair"></i> <?= t('gun_offers') ?>
             <span class="badge bg-danger"><?= count($listings) ?></span>
         </h2>
-        
+
         <?php if (empty($listings)): ?>
             <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Keine Angebote gefunden. Versuchen Sie andere Filterkriterien.
+                <i class="bi bi-info-circle"></i> <?= t('gun_no_offers') ?> <?= t('gun_try_other_filters') ?>
             </div>
         <?php else: ?>
             <?php foreach ($listings as $item): ?>
@@ -177,7 +183,7 @@ include 'includes/header.php';
                             </h4>
                             
                             <div class="mb-3">
-                                <span class="badge bg-secondary"><?= htmlspecialchars($item['category_name']) ?></span>
+                                <span class="badge bg-secondary"><?= htmlspecialchars(__t($categories_map[$item['category_id']] ?? [], 'name')) ?></span>
                                 <?php if ($item['manufacturer_name']): ?>
                                     <span class="badge bg-dark"><?= htmlspecialchars($item['manufacturer_name']) ?></span>
                                 <?php endif; ?>
@@ -194,22 +200,22 @@ include 'includes/header.php';
                                     'gebraucht' => 'secondary'
                                 ];
                                 $condition_text = [
-                                    'neu' => 'Neu',
-                                    'wie_neu' => 'Wie neu',
-                                    'sehr_gut' => 'Sehr gut',
-                                    'gut' => 'Gut',
-                                    'gebraucht' => 'Gebraucht'
+                                    'neu' => t('gun_condition_neu'),
+                                    'wie_neu' => t('gun_condition_wie_neu'),
+                                    'sehr_gut' => t('gun_condition_sehr_gut'),
+                                    'gut' => t('gun_condition_gut'),
+                                    'gebraucht' => t('gun_condition_gebraucht')
                                 ];
                                 ?>
                                 <span class="badge bg-<?= $condition_class[$item['condition_rating']] ?? 'secondary' ?>">
                                     <?= $condition_text[$item['condition_rating']] ?? $item['condition_rating'] ?>
                                 </span>
-                                
+
                                 <?php
                                 $license_icons = [
-                                    'none' => '✓ Frei ab 18',
-                                    'kleiner_waffenschein' => '📋 Kleiner WS',
-                                    'wbk' => '📜 WBK erforderlich'
+                                    'none' => '✓ ' . t('gun_license_none'),
+                                    'kleiner_waffenschein' => '📋 ' . t('gun_license_kleiner_waffenschein'),
+                                    'wbk' => '📜 ' . t('gun_license_wbk')
                                 ];
                                 ?>
                                 <span class="badge license-badge bg-warning text-dark">
@@ -227,7 +233,7 @@ include 'includes/header.php';
                             <div class="small text-muted">
                                 <i class="bi bi-geo-alt"></i> <?= htmlspecialchars($item['plz'] . ' ' . $item['ort']) ?>
                                 <?php if ($item['shipping_possible']): ?>
-                                    | <i class="bi bi-truck"></i> Versand möglich
+                                    | <i class="bi bi-truck"></i> <?= t('gun_shipping_possible') ?>
                                 <?php endif; ?>
                                 <?php if ($item['seller_rating']): ?>
                                     | <i class="bi bi-star-fill text-warning"></i> 
@@ -240,17 +246,17 @@ include 'includes/header.php';
                             <div class="gun-price mb-3">
                                 <?= number_format($item['price'], 2, ',', '.') ?> €
                                 <?php if ($item['price_negotiable']): ?>
-                                    <small class="text-muted d-block" style="font-size: 0.5em;">VB</small>
+                                    <small class="text-muted d-block" style="font-size: 0.5em;"><?= t('gun_vb') ?></small>
                                 <?php endif; ?>
                             </div>
-                            
+
                             <div class="d-grid gap-2">
                                 <a href="gun_detail.php?id=<?= $item['listing_id'] ?>" class="btn btn-danger">
-                                    <i class="bi bi-eye"></i> Details ansehen
+                                    <i class="bi bi-eye"></i> <?= t('gun_details') ?>
                                 </a>
                                 <?php if (isLoggedIn()): ?>
                                     <button class="btn btn-outline-danger btn-sm">
-                                        <i class="bi bi-heart"></i> Merken
+                                        <i class="bi bi-heart"></i> <?= t('gun_save') ?>
                                     </button>
                                 <?php endif; ?>
                             </div>
