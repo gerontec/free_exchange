@@ -10,12 +10,15 @@ if (!$lagerraum_id) {
     exit;
 }
 
-// Lagerraum-Details laden (inkl. Anbieter-E-Mail)
+// Lagerraum-Details laden (inkl. Anbieter-E-Mail und Adresse)
 $stmt = $pdo->prepare("
-    SELECT lr.*, u.email as anbieter_email, u.name as anbieter_name
-    FROM lg_v_angebote lr
+    SELECT lr.*,
+           a.strasse, a.hausnummer, a.plz, a.ort, a.land,
+           u.email as anbieter_email, u.name as anbieter_name
+    FROM lg_lagerraeume lr
+    LEFT JOIN lg_adressen a ON lr.adresse_id = a.adresse_id
     JOIN lg_users u ON lr.anbieter_id = u.user_id
-    WHERE lr.lagerraum_id = :id
+    WHERE lr.lagerraum_id = :id AND lr.aktiv = 1
 ");
 $stmt->execute([':id' => $lagerraum_id]);
 $lagerraum = $stmt->fetch();
