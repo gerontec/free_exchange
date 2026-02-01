@@ -86,8 +86,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
             ':message' => $_POST['nachricht']
         ]);
 
-        // Optional: E-Mail-Benachrichtigung an Verkäufer senden
-        // TODO: Implement email notification
+        // E-Mail-Benachrichtigung an Verkäufer senden
+        if (!empty($listing['seller_email'])) {
+            $sellerName = htmlspecialchars($listing['seller_name'] ?? 'Verkäufer');
+            $senderName = $is_logged_in ? htmlspecialchars($current_user['name']) : htmlspecialchars($_POST['name']);
+            $senderEmail = $is_logged_in ? htmlspecialchars($current_user['email']) : htmlspecialchars($_POST['email']);
+            $senderTelefon = $is_logged_in ? htmlspecialchars($current_user['telefon'] ?? '-') : htmlspecialchars($_POST['telefon'] ?? '-');
+            $nachricht = nl2br(htmlspecialchars($_POST['nachricht']));
+
+            $listingTitle = htmlspecialchars($current_lang === 'en' ? ($listing['title_en'] ?: $listing['title_de']) : $listing['title_de']);
+            $metalName = htmlspecialchars($current_lang === 'en' ? ($listing['metal_name_en'] ?? $listing['metal_name']) : $listing['metal_name']);
+            $quantity = number_format($listing['quantity'], 2);
+            $unitCode = htmlspecialchars($listing['unit_code']);
+            $pricePerUnit = number_format($listing['price_per_unit'], 2, ',', '.');
+            $totalPrice = number_format($listing['total_price'], 2, ',', '.');
+            $currencyCode = htmlspecialchars($listing['currency_code']);
+            $purity = $listing['purity'] ? htmlspecialchars($listing['purity']) : '-';
+
+            $metal_icons = ['XAU' => '🥇', 'XAG' => '🥈', 'XPT' => '⚪', 'XPD' => '🔘'];
+            $metalIcon = $metal_icons[$listing['metal_symbol']] ?? '💰';
+
+            $location = '';
+            if ($listing['ort']) {
+                $location = "📍 " . htmlspecialchars($listing['plz'] . ' ' . $listing['ort']);
+                if ($listing['land']) {
+                    $location .= " (" . htmlspecialchars($listing['land']) . ")";
+                }
+            }
+
+            $emailContent = "
+                <h2>" . ($current_lang === 'en' ? 'New Contact Request for Your Listing' : 'Neue Kontaktanfrage für Ihr Angebot') . "</h2>
+
+                <h3>" . ($current_lang === 'en' ? 'Listing Details:' : 'Angebot-Details:') . "</h3>
+                <p>
+                    <strong>" . ($current_lang === 'en' ? 'Title:' : 'Titel:') . "</strong> {$listingTitle}<br>
+                    <strong>" . ($current_lang === 'en' ? 'Metal:' : 'Metall:') . "</strong> {$metalIcon} {$metalName}<br>
+                    <strong>" . ($current_lang === 'en' ? 'Quantity:' : 'Menge:') . "</strong> {$quantity} {$unitCode}<br>
+                    <strong>" . ($current_lang === 'en' ? 'Purity:' : 'Feinheit:') . "</strong> {$purity}<br>
+                    <strong>" . ($current_lang === 'en' ? 'Price:' : 'Preis:') . "</strong> {$pricePerUnit} {$currencyCode}/{$unitCode}
+                    (" . ($current_lang === 'en' ? 'Total:' : 'Gesamt:') . " {$totalPrice} {$currencyCode})";
+
+            if ($location) {
+                $emailContent .= "<br><strong>" . ($current_lang === 'en' ? 'Location:' : 'Standort:') . "</strong> {$location}";
+            }
+
+            $emailContent .= "
+                </p>
+
+                <h3>" . ($current_lang === 'en' ? 'Contact Details:' : 'Kontaktdaten:') . "</h3>
+                <p>
+                    <strong>" . ($current_lang === 'en' ? 'Name:' : 'Name:') . "</strong> {$senderName}<br>
+                    <strong>" . ($current_lang === 'en' ? 'Email:' : 'E-Mail:') . "</strong> <a href='mailto:{$senderEmail}'>{$senderEmail}</a><br>
+                    <strong>" . ($current_lang === 'en' ? 'Phone:' : 'Telefon:') . "</strong> {$senderTelefon}
+                </p>
+
+                <h3>" . ($current_lang === 'en' ? 'Message:' : 'Nachricht:') . "</h3>
+                <p>{$nachricht}</p>
+
+                <p style='margin-top: 30px;'>
+                    <a href='" . BASE_URL . "em_meine_angebote.php' class='btn'>" .
+                    ($current_lang === 'en' ? 'Manage My Listings' : 'Meine Angebote verwalten') . "</a>
+                </p>
+            ";
+
+            $emailSubject = ($current_lang === 'en' ? 'New inquiry about your ' : 'Neue Anfrage zu Ihrem ') . $metalName . ($current_lang === 'en' ? ' listing' : '-Angebot');
+            sendEmail($listing['seller_email'], $emailSubject, getEmailTemplate($emailContent), MAIL_FROM, $senderEmail);
+        }
 
         $success = true;
     } catch (Exception $e) {
