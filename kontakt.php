@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/config.php';
+require_once 'includes/lang.php';
 $pageTitle = 'Kontakt aufnehmen';
 
 $lagerraum_id = $_GET['id'] ?? null;

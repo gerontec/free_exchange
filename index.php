@@ -3,6 +3,7 @@
  * index.php - Multi-Exchange Platform (Lagerraum, Edelmetalle, Waffen)
  */
 require_once 'includes/config.php';
+require_once 'includes/lang.php';
 
 // 1. Sprache festlegen (Default: de)
 $current_lang = $_SESSION['lang'] ?? 'de';
