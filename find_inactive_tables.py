@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import pymysql
+import sys
 from datetime import datetime, timedelta
 
 # Konfiguration
@@ -12,7 +13,8 @@ DB_CONFIG = {
     'cursorclass': pymysql.cursors.DictCursor
 }
 
-DAYS_INACTIVE = 400
+# Standard: 30 Tage, kann per Kommandozeile überschrieben werden
+DEFAULT_DAYS_INACTIVE = 30
 
 def format_size(bytes_size):
     """Konvertiert Bytes in lesbare Größe (KB, MB, GB)"""
@@ -25,7 +27,7 @@ def format_size(bytes_size):
         bytes_size /= 1024.0
     return f"{bytes_size:.2f} PB"
 
-def find_inactive_tables():
+def find_inactive_tables(days_inactive):
     try:
         connection = pymysql.connect(**DB_CONFIG)
 
@@ -40,7 +42,7 @@ def find_inactive_tables():
                     DATA_LENGTH,
                     INDEX_LENGTH,
                     (DATA_LENGTH + INDEX_LENGTH) AS TOTAL_SIZE,
-                    DATEDIFF(NOW(), COALESCE(UPDATE_TIME, CREATE_TIME)) AS DAYS_INACTIVE
+                    DATEDIFF(NOW(), COALESCE(UPDATE_TIME, CREATE_TIME)) AS days_inactive
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = %s
                   AND TABLE_TYPE = 'BASE TABLE'
@@ -48,15 +50,15 @@ def find_inactive_tables():
                 ORDER BY TOTAL_SIZE DESC
             """
 
-            cursor.execute(sql, (DB_CONFIG['database'], DAYS_INACTIVE))
+            cursor.execute(sql, (DB_CONFIG['database'], days_inactive))
             inactive_tables = cursor.fetchall()
 
             if not inactive_tables:
-                print(f"✓ Keine inaktiven Tabellen gefunden (älter als {DAYS_INACTIVE} Tage).")
+                print(f"✓ Keine inaktiven Tabellen gefunden (älter als {days_inactive} Tage).")
                 return
 
             print(f"\n{'='*120}")
-            print(f"TABELLEN OHNE AKTIVITÄT IN DEN LETZTEN {DAYS_INACTIVE} TAGEN ({len(inactive_tables)} gefunden)")
+            print(f"TABELLEN OHNE AKTIVITÄT IN DEN LETZTEN {days_inactive} TAGEN ({len(inactive_tables)} gefunden)")
             print(f"{'='*120}")
             print(f"{'TABELLENNAME':<40} {'ZEILEN':>12} {'INAKTIV':>10} {'LETZTES UPDATE':<20} {'GRÖSSE':>12}")
             print(f"{'='*120}")
@@ -66,7 +68,7 @@ def find_inactive_tables():
                 name = table['TABLE_NAME']
                 rows = table['TABLE_ROWS'] or 0
                 size = table['TOTAL_SIZE'] or 0
-                days_inactive = table['DAYS_INACTIVE'] or 0
+                days_inactive = table['days_inactive'] or 0
                 last_update = table['UPDATE_TIME'] or table['CREATE_TIME']
 
                 total_size += size
@@ -91,7 +93,7 @@ def find_inactive_tables():
             }
 
             for table in inactive_tables:
-                days = table['DAYS_INACTIVE'] or 0
+                days = table['days_inactive'] or 0
                 size = table['TOTAL_SIZE'] or 0
 
                 if days <= 30:
@@ -127,4 +129,20 @@ def find_inactive_tables():
             connection.close()
 
 if __name__ == "__main__":
-    find_inactive_tables()
+    # Kommandozeilen-Argument parsen
+    if len(sys.argv) > 1:
+        try:
+            days_inactive = int(sys.argv[1])
+            if days_inactive <= 0:
+                print("❌ Fehler: Anzahl der Tage muss größer als 0 sein.")
+                sys.exit(1)
+        except ValueError:
+            print("❌ Fehler: Ungültige Anzahl der Tage. Bitte eine Zahl eingeben.")
+            print(f"Verwendung: {sys.argv[0]} [TAGE]")
+            print(f"Beispiel: {sys.argv[0]} 30")
+            sys.exit(1)
+    else:
+        days_inactive = DEFAULT_DAYS_INACTIVE
+
+    print(f"Suche nach Tabellen ohne Aktivität in den letzten {days_inactive} Tagen...\n")
+    find_inactive_tables(days_inactive)
