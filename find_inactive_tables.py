@@ -42,7 +42,7 @@ def find_inactive_tables(days_inactive):
                     DATA_LENGTH,
                     INDEX_LENGTH,
                     (DATA_LENGTH + INDEX_LENGTH) AS TOTAL_SIZE,
-                    DATEDIFF(NOW(), COALESCE(UPDATE_TIME, CREATE_TIME)) AS DAYS_INACTIVE
+                    DATEDIFF(NOW(), COALESCE(UPDATE_TIME, CREATE_TIME)) AS days_inactive
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = %s
                   AND TABLE_TYPE = 'BASE TABLE'
@@ -68,7 +68,7 @@ def find_inactive_tables(days_inactive):
                 name = table['TABLE_NAME']
                 rows = table['TABLE_ROWS'] or 0
                 size = table['TOTAL_SIZE'] or 0
-                days = table['DAYS_INACTIVE'] or 0
+                days_inactive = table['days_inactive'] or 0
                 last_update = table['UPDATE_TIME'] or table['CREATE_TIME']
 
                 total_size += size
@@ -78,7 +78,7 @@ def find_inactive_tables(days_inactive):
                 else:
                     last_update_str = 'Unbekannt'
 
-                print(f"{name:<40} {rows:>12,} {days:>8}d {last_update_str:<20} {format_size(size):>12}")
+                print(f"{name:<40} {rows:>12,} {days_inactive:>8}d {last_update_str:<20} {format_size(size):>12}")
 
             print(f"{'='*120}")
             print(f"GESAMT: {len(inactive_tables)} Tabellen, {format_size(total_size)}")
@@ -93,7 +93,7 @@ def find_inactive_tables(days_inactive):
             }
 
             for table in inactive_tables:
-                days = table['DAYS_INACTIVE'] or 0
+                days = table['days_inactive'] or 0
                 size = table['TOTAL_SIZE'] or 0
 
                 if days <= 30:
