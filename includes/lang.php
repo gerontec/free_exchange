@@ -72,6 +72,14 @@ $translations = [
         'gun_shipping_possible' => 'Versand möglich',
         'gun_details' => 'Details ansehen',
         'gun_vb' => 'VB',
+        'gun_caliber_placeholder' => 'z.B. 9mm',
+        'gun_price_placeholder' => 'z.B. 1000',
+        'gun_try_other_filters' => 'Versuchen Sie andere Filterkriterien.',
+        'gun_save' => 'Merken',
+        'gun_notes_title' => '⚠️ Wichtige Hinweise',
+        'gun_notes_1' => 'Waffenhandel nur zwischen Inhabern entsprechender Genehmigungen',
+        'gun_notes_2' => 'Persönliche Übergabe empfohlen',
+        'gun_notes_3' => 'Alle Angebote gemäß WaffG',
 
         // Edelmetall-Börse
         'my_metal_offers' => 'Meine Edelmetall-Angebote',
@@ -144,6 +152,14 @@ $translations = [
         'gun_shipping_possible' => 'Shipping possible',
         'gun_details' => 'View Details',
         'gun_vb' => 'OBO',
+        'gun_caliber_placeholder' => 'e.g. 9mm',
+        'gun_price_placeholder' => 'e.g. 1000',
+        'gun_try_other_filters' => 'Try different filter criteria.',
+        'gun_save' => 'Save',
+        'gun_notes_title' => '⚠️ Important Notes',
+        'gun_notes_1' => 'Firearms trade only between holders of appropriate licenses',
+        'gun_notes_2' => 'Personal handover recommended',
+        'gun_notes_3' => 'All offers in compliance with firearms law',
 
         // Precious Metals Exchange
         'my_metal_offers' => 'My Precious Metals Offers',
